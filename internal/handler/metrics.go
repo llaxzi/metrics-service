@@ -37,16 +37,16 @@ func (h *metricsHandler) Update(w http.ResponseWriter, req *http.Request) {
 		формат: http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 		req.URL.Path возвращает /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 	*/
-	partsUrl := strings.Split(strings.TrimPrefix(req.URL.Path, "/"), "/") // убираем первый / и сплитим
+	partsURL := strings.Split(strings.TrimPrefix(req.URL.Path, "/"), "/") // убираем первый / и сплитим
 
-	if len(partsUrl) != 4 {
+	if len(partsURL) != 4 {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
 
-	metricType := partsUrl[1]
-	metricName := partsUrl[2]
-	metricValStr := partsUrl[3]
+	metricType := partsURL[1]
+	metricName := partsURL[2]
+	metricValStr := partsURL[3]
 
 	// Обновляем метрику в зивисимости от типа
 	// to-do: вынести в сервис
