@@ -39,21 +39,39 @@ func (h *metricsHandler) Update(w http.ResponseWriter, req *http.Request) {
 	*/
 	partsUrl := strings.Split(strings.TrimPrefix(req.URL.Path, "/"), "/") // убираем первый / и сплитим
 
+	if len(partsUrl) != 4 {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
+
 	metricType := partsUrl[1]
 	metricName := partsUrl[2]
 	metricValStr := partsUrl[3]
 
 	// Обновляем метрику в зивисимости от типа
+	// to-do: вынести в сервис
+
 	switch metricType {
 	case "gauge":
-		metricVal, _ := strconv.ParseFloat(metricValStr, 64)
+		metricVal, err := strconv.ParseFloat(metricValStr, 64)
+		if err != nil {
+			http.Error(w, "wrong url", http.StatusBadRequest)
+			return
+		}
+
 		h.metricsStorage.SetGauge(metricName, metricVal)
 	case "counter":
-		metricVal, _ := strconv.ParseInt(metricValStr, 10, 64)
+		metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
+		if err != nil {
+			http.Error(w, "wrong url", http.StatusBadRequest)
+			return
+		}
+
 		h.metricsStorage.SetCounter(metricName, metricVal)
 		fmt.Println(h.metricsStorage.GetCounter(metricName))
 	default:
 		http.Error(w, "wrong metric type", http.StatusBadRequest)
+
 	}
 
 	w.Header().Set("Content-Type", "text/plain")
