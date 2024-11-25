@@ -1,21 +1,25 @@
 package handler
 
 import (
-	"metrics-service/internal/storage"
+	"metrics-service/internal/server/storage"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-type gaugeHandler struct {
-	gaugeStorage storage.GaugeStorage
+type Handler interface {
+	Update(w http.ResponseWriter, req *http.Request)
 }
 
-func NewGaugeHandler(storage storage.GaugeStorage) Handler {
-	return &gaugeHandler{storage}
+type counterHandler struct {
+	counterStorage storage.CounterStorage
 }
 
-func (h *gaugeHandler) Update(w http.ResponseWriter, req *http.Request) {
+func NewCounterHandler(storage storage.CounterStorage) Handler {
+	return &counterHandler{storage}
+}
+
+func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 	// Проверяем http метод
 	if req.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -39,17 +43,18 @@ func (h *gaugeHandler) Update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	//metricType := partsURL[1]
+	//metricType := partsURL[1]w
 	metricName := partsURL[2]
 	metricValStr := partsURL[3]
 
-	metricVal, err := strconv.ParseFloat(metricValStr, 64)
+	metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
 	if err != nil {
 		http.Error(w, "wrong url", http.StatusBadRequest)
 		return
 	}
-	h.gaugeStorage.Set(metricName, metricVal)
-	//fmt.Println(h.gaugeStorage.Get(metricName))
+	h.counterStorage.Set(metricName, metricVal)
+	//fmt.Println(h.counterStorage.Get(metricName))
+
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 }

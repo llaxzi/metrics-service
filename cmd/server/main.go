@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"metrics-service/internal/handler"
-	storage "metrics-service/internal/storage"
+	handler2 "metrics-service/internal/server/handler"
+	storage2 "metrics-service/internal/server/storage"
 	"net/http"
 )
 
@@ -11,12 +11,12 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Создаем хранилища
-	counterStorage := storage.NewCounterStorage()
-	gaugeStorage := storage.NewGaugeStorage()
+	counterStorage := storage2.NewCounterStorage()
+	gaugeStorage := storage2.NewGaugeStorage()
 
 	// Создаем handler's
-	counterHandler := handler.NewCounterHandler(counterStorage)
-	gaugeHandler := handler.NewGaugeHandler(gaugeStorage)
+	counterHandler := handler2.NewCounterHandler(counterStorage)
+	gaugeHandler := handler2.NewGaugeHandler(gaugeStorage)
 
 	mux.HandleFunc("/update/counter/", counterHandler.Update)
 	mux.HandleFunc("/update/gauge/", gaugeHandler.Update)
