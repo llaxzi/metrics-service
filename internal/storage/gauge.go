@@ -14,7 +14,7 @@ func NewGaugeStorage() GaugeStorage {
 }
 
 func (s *gaugeStorage) Set(key string, value float64) {
-	s.gauge[key] += value
+	s.gauge[key] = value
 }
 
 func (s *gaugeStorage) Get(key string) (float64, bool) {

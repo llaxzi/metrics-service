@@ -1,26 +1,25 @@
 package handler
 
 import (
-	"fmt"
 	"metrics-service/internal/storage"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-type MetricsHandler interface {
+type Handler interface {
 	Update(w http.ResponseWriter, req *http.Request)
 }
 
-type metricsHandler struct {
-	metricsStorage storage.MetricsStorage
+type counterHandler struct {
+	counterStorage storage.CounterStorage
 }
 
-func NewMetricsHandler(metricsStorage storage.MetricsStorage) MetricsHandler {
-	return &metricsHandler{metricsStorage}
+func NewCounterHandler(storage storage.CounterStorage) Handler {
+	return &counterHandler{storage}
 }
 
-func (h *metricsHandler) Update(w http.ResponseWriter, req *http.Request) {
+func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 	// Проверяем http метод
 	if req.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -44,38 +43,18 @@ func (h *metricsHandler) Update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	metricType := partsURL[1]
+	//metricType := partsURL[1]w
 	metricName := partsURL[2]
 	metricValStr := partsURL[3]
 
-	// Обновляем метрику в зивисимости от типа
-	// to-do: вынести в сервис
-
-	switch metricType {
-	case "gauge":
-		metricVal, err := strconv.ParseFloat(metricValStr, 64)
-		if err != nil {
-			http.Error(w, "wrong url", http.StatusBadRequest)
-			return
-		}
-
-		h.metricsStorage.SetGauge(metricName, metricVal)
-	case "counter":
-		metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
-		if err != nil {
-			http.Error(w, "wrong url", http.StatusBadRequest)
-			return
-		}
-
-		h.metricsStorage.SetCounter(metricName, metricVal)
-		fmt.Println(h.metricsStorage.GetCounter(metricName))
-	default:
-		http.Error(w, "wrong metric type", http.StatusBadRequest)
-
+	metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
+	if err != nil {
+		http.Error(w, "wrong url", http.StatusBadRequest)
+		return
 	}
+	h.counterStorage.Set(metricName, metricVal)
+	//fmt.Println(h.counterStorage.Get(metricName))
 
 	w.Header().Set("Content-Type", "text/plain")
-	//w.Header().Set("Content-Length", )
 	w.WriteHeader(http.StatusOK)
-
 }
