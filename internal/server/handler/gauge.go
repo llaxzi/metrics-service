@@ -8,10 +8,10 @@ import (
 )
 
 type gaugeHandler struct {
-	gaugeStorage storage.GaugeStorage
+	storage storage.MetricsStorage
 }
 
-func NewGaugeHandler(storage storage.GaugeStorage) Handler {
+func NewGaugeHandler(storage storage.MetricsStorage) Handler {
 	return &gaugeHandler{storage}
 }
 
@@ -48,8 +48,13 @@ func (h *gaugeHandler) Update(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "wrong url", http.StatusBadRequest)
 		return
 	}
-	h.gaugeStorage.Set(metricName, metricVal)
-	//fmt.Println(h.gaugeStorage.Get(metricName))
+
+	// TODO вынести в сервис
+	h.storage.SetGauge(metricName, metricVal)
+
+	/*metricValue, _ := h.storage.GetGauge(metricName)
+	fmt.Printf("Metric: %s, Value: %.0f\n", metricName, metricValue)*/
+
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 }

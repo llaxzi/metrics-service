@@ -12,10 +12,10 @@ type Handler interface {
 }
 
 type counterHandler struct {
-	counterStorage storage.CounterStorage
+	storage storage.MetricsStorage
 }
 
-func NewCounterHandler(storage storage.CounterStorage) Handler {
+func NewCounterHandler(storage storage.MetricsStorage) Handler {
 	return &counterHandler{storage}
 }
 
@@ -43,7 +43,7 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	//metricType := partsURL[1]w
+	//metricType := partsURL[1]
 	metricName := partsURL[2]
 	metricValStr := partsURL[3]
 
@@ -52,8 +52,9 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "wrong url", http.StatusBadRequest)
 		return
 	}
-	h.counterStorage.Set(metricName, metricVal)
-	//fmt.Println(h.counterStorage.Get(metricName))
+
+	// TODO вынести в сервис
+	h.storage.SetCounter(metricName, metricVal)
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
