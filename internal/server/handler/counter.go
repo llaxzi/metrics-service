@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"metrics-service/internal/server/storage"
 	"net/http"
 	"strconv"
@@ -55,6 +56,8 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 
 	// TODO вынести в сервис
 	h.storage.SetCounter(metricName, metricVal)
+
+	fmt.Println(h.storage.GetCounter("PollCount"))
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)

@@ -5,10 +5,14 @@ import "metrics-service/internal/agent"
 // TODO: pollCount
 
 func main() {
-	metricsCollector := agent.NewMetricsCollector()
 
+	metricsCollector := agent.NewMetricsCollector()
 	sender := agent.NewSender()
 
-	sender.Send(metricsCollector.Collect())
+	pollInterval := 5
+	reportInterval := 10
+
+	a := agent.NewAgent(pollInterval, reportInterval, metricsCollector, sender)
+	a.Work()
 
 }

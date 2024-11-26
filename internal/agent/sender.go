@@ -20,6 +20,14 @@ func NewSender() Sender {
 
 func (s *sender) Send(metricsMap map[string]interface{}) {
 	for metricName, metricVal := range metricsMap {
+
+		var metricType string
+		if metricName == "PollCount" {
+			metricType = "counter"
+		} else {
+			metricType = "gauge"
+		}
+
 		var metricValStr string
 		switch metricName {
 		case "GCCPUFraction", "RandomValue":
@@ -30,7 +38,8 @@ func (s *sender) Send(metricsMap map[string]interface{}) {
 			metricValStr = strconv.FormatUint(metricVal.(uint64), 10)
 
 		}
-		url := "http://localhost:8080/update/gauge/" + metricName + "/" + metricValStr
+
+		url := "http://localhost:8080/update/" + metricType + "/" + metricName + "/" + metricValStr
 		request, err := http.NewRequest("POST", url, nil)
 		if err != nil {
 			fmt.Printf("failed to create request: %v\n", err)
