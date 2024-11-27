@@ -1,4 +1,4 @@
-package agent
+package collector
 
 import (
 	"math/rand"

@@ -2,6 +2,8 @@ package agent
 
 import (
 	"fmt"
+	"metrics-service/internal/agent/collector"
+	sender2 "metrics-service/internal/agent/sender"
 	"sync"
 	"time"
 )
@@ -11,22 +13,24 @@ type Agent interface {
 }
 
 type agent struct {
+	metricsCollector collector.MetricsCollector
+	sender           sender2.Sender
 	pollInterval     int
 	reportInterval   int
 	pollCount        uint64
-	metricsCollector MetricsCollector
-	sender           Sender
-	metrics          map[string]interface{}
 	mu               sync.Mutex
+	metrics          map[string]interface{}
 }
 
-func NewAgent(pollInterval int, reportInterval int, metricsCollector MetricsCollector, sender Sender) Agent {
-	return &agent{pollInterval, reportInterval, 0, metricsCollector, sender, make(map[string]interface{}), sync.Mutex{}}
+func NewAgent(pollInterval int, reportInterval int, metricsCollector collector.MetricsCollector, sender sender2.Sender) Agent {
+	return &agent{metricsCollector, sender, pollInterval, reportInterval, 0, sync.Mutex{}, make(map[string]interface{})}
 }
 
+// Work Использует Ticker и select для обработки временных интервалов
+// Также лочим данные от data race мьютексом
 func (a *agent) Work() {
-	pollTicker := time.NewTicker(time.Second * time.Duration(a.pollInterval))
 
+	pollTicker := time.NewTicker(time.Second * time.Duration(a.pollInterval))
 	reportTicker := time.NewTicker(time.Second * time.Duration(a.reportInterval))
 
 	for {
@@ -42,6 +46,7 @@ func (a *agent) Work() {
 			a.mu.Lock()
 			a.sender.Send(a.metrics)
 			fmt.Printf("Send metrics \n")
+			a.pollCount = 0 // Сбрасываем, т.к. метрика типа counter
 			a.mu.Unlock()
 		}
 	}

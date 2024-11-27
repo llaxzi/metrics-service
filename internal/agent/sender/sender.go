@@ -1,4 +1,4 @@
-package agent
+package sender
 
 import (
 	"fmt"
@@ -11,11 +11,12 @@ type Sender interface {
 }
 
 type sender struct {
-	client *http.Client
+	client  *http.Client
+	baseURL string
 }
 
-func NewSender() Sender {
-	return &sender{client: &http.Client{}}
+func NewSender(baseURL string) Sender {
+	return &sender{&http.Client{}, baseURL}
 }
 
 func (s *sender) Send(metricsMap map[string]interface{}) {
@@ -29,17 +30,18 @@ func (s *sender) Send(metricsMap map[string]interface{}) {
 		}
 
 		var metricValStr string
-		switch metricName {
-		case "GCCPUFraction", "RandomValue":
-			metricValStr = strconv.FormatFloat(metricVal.(float64), 'f', -1, 64)
-		case "NumForcedGC", "NumGC":
-			metricValStr = strconv.FormatUint(uint64(metricVal.(uint32)), 10)
-		default:
+		switch metricVal.(type) {
+		case uint64:
 			metricValStr = strconv.FormatUint(metricVal.(uint64), 10)
-
+		case uint32:
+			metricValStr = strconv.FormatUint(uint64(metricVal.(uint32)), 10)
+		case float64:
+			metricValStr = strconv.FormatFloat(metricVal.(float64), 'f', -1, 64)
+		default:
+			fmt.Printf("Wrong metric value: %v", metricVal)
 		}
 
-		url := "http://localhost:8080/update/" + metricType + "/" + metricName + "/" + metricValStr
+		url := s.baseURL + "/" + metricType + "/" + metricName + "/" + metricValStr
 		request, err := http.NewRequest("POST", url, nil)
 		if err != nil {
 			fmt.Printf("failed to create request: %v\n", err)
