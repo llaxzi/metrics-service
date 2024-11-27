@@ -44,7 +44,6 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	//metricType := partsURL[1]
 	metricName := partsURL[2]
 	metricValStr := partsURL[3]
 
@@ -57,6 +56,7 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 	// TODO вынести в сервис
 	h.storage.SetCounter(metricName, metricVal)
 
+	fmt.Print("PollCount= ")
 	fmt.Println(h.storage.GetCounter("PollCount"))
 
 	w.Header().Set("Content-Type", "text/plain")
