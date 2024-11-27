@@ -30,7 +30,7 @@ func (s *sender) Send(metricsMap map[string]interface{}) {
 		}
 
 		var metricValStr string
-		switch metricVal.(type) {
+		switch v := metricVal.(type) {
 		case uint64:
 			metricValStr = strconv.FormatUint(metricVal.(uint64), 10)
 		case uint32:
@@ -38,7 +38,7 @@ func (s *sender) Send(metricsMap map[string]interface{}) {
 		case float64:
 			metricValStr = strconv.FormatFloat(metricVal.(float64), 'f', -1, 64)
 		default:
-			fmt.Printf("Wrong metric value: %v", metricVal)
+			fmt.Printf("Wrong metric value type: %v", v)
 		}
 
 		url := s.baseURL + "/" + metricType + "/" + metricName + "/" + metricValStr
