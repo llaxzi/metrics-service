@@ -53,8 +53,7 @@ func (h *gaugeHandler) Update(w http.ResponseWriter, req *http.Request) {
 	h.storage.SetGauge(metricName, metricVal)
 
 	/*metricValue, _ := h.storage.GetGauge(metricName)
-	fmt.Printf("Metric: %s, Value: %.0f\n", metricName, metricValue)
-	*/
+	fmt.Printf("Metric: %s, Value: %.0f\n", metricName, metricValue)*/
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
