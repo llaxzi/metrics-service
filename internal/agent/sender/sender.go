@@ -2,6 +2,7 @@ package sender
 
 import (
 	"fmt"
+	"github.com/go-resty/resty/v2"
 	"net/http"
 	"strconv"
 )
@@ -42,21 +43,17 @@ func (s *sender) Send(metricsMap map[string]interface{}) {
 		}
 
 		url := s.baseURL + "/" + metricType + "/" + metricName + "/" + metricValStr
-		request, err := http.NewRequest("POST", url, nil)
-		if err != nil {
-			fmt.Printf("failed to create request: %v\n", err)
-		}
 
-		request.Header.Set("Content-Type", "text/plain")
+		client := resty.New()
+		client.SetHeader("Content-type", "text/plain")
 
-		response, err := s.client.Do(request)
+		resp, err := client.R().Post(url)
 		if err != nil {
 			fmt.Printf("failed to send request: %v\n", err)
 			continue
 		}
-		response.Body.Close()
 
-		if response.StatusCode != 200 {
+		if resp.StatusCode() != 200 {
 			fmt.Printf("request %v failed: %v\n", url, err)
 			continue
 		}

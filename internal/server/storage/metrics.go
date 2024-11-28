@@ -1,5 +1,7 @@
 package storage
 
+import "strconv"
+
 /*
 Хранилище метрик
 gauge - метрика текущего состояния системы. Новое значение всегда заменяет старое
@@ -12,6 +14,7 @@ type MetricsStorage interface {
 	GetGauge(key string) (float64, bool)
 	SetCounter(key string, value int64)
 	GetCounter(key string) (int64, bool)
+	GetMetrics() map[string]string
 }
 
 func NewMetricsStorage() MetricsStorage {
@@ -40,4 +43,16 @@ func (m *metricsStorage) SetCounter(key string, value int64) {
 func (m *metricsStorage) GetCounter(key string) (int64, bool) {
 	val, exists := m.counter[key]
 	return val, exists
+}
+
+func (m *metricsStorage) GetMetrics() map[string]string {
+	metrics := make(map[string]string)
+
+	for metricName, metricVal := range m.counter {
+		metrics[metricName] = strconv.FormatInt(metricVal, 10)
+	}
+	for metricName, metricVal := range m.gauge {
+		metrics[metricName] = strconv.FormatFloat(metricVal, 'f', -1, 64)
+	}
+	return metrics
 }

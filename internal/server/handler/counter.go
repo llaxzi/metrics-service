@@ -2,33 +2,32 @@ package handler
 
 import (
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/storage"
 	"net/http"
 	"strconv"
 	"strings"
 )
 
-type Handler interface {
-	Update(w http.ResponseWriter, req *http.Request)
+type MetricsHandler interface {
+	Update(ctx *gin.Context)
+	Get(ctx *gin.Context)
 }
 
 type counterHandler struct {
 	storage storage.MetricsStorage
 }
 
-func NewCounterHandler(storage storage.MetricsStorage) Handler {
+func NewCounterHandler(storage storage.MetricsStorage) MetricsHandler {
 	return &counterHandler{storage}
 }
 
-func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
-	// Проверяем http метод
-	if req.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+func (h *counterHandler) Update(ctx *gin.Context) {
+
 	// Проверяем Content-Type
-	if req.Header.Get("Content-Type") != "text/plain" {
-		http.Error(w, "unsupported content type", http.StatusUnsupportedMediaType)
+	if ctx.GetHeader("Content-Type") != "text/plain" {
+
+		ctx.String(http.StatusUnsupportedMediaType, "unsupported content type")
 		return
 	}
 
@@ -37,10 +36,10 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 		формат: http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 		req.URL.Path возвращает /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
 	*/
-	partsURL := strings.Split(strings.TrimPrefix(req.URL.Path, "/"), "/") // убираем первый / и сплитим
+	partsURL := strings.Split(strings.TrimPrefix(ctx.Request.URL.Path, "/"), "/") // убираем первый / и сплитим
 
 	if len(partsURL) != 4 {
-		http.Error(w, "Not found", http.StatusNotFound)
+		ctx.String(http.StatusNotFound, "Not found")
 		return
 	}
 
@@ -49,7 +48,7 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 
 	metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
 	if err != nil {
-		http.Error(w, "wrong url", http.StatusBadRequest)
+		ctx.String(http.StatusBadRequest, "wrong URL")
 		return
 	}
 
@@ -59,6 +58,34 @@ func (h *counterHandler) Update(w http.ResponseWriter, req *http.Request) {
 	fmt.Print("PollCount= ")
 	fmt.Println(h.storage.GetCounter("PollCount"))
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusOK)
+	ctx.Set("Content-Type", "text/plain")
+	ctx.String(http.StatusOK, "updated successfully")
+}
+
+func (h *counterHandler) Get(ctx *gin.Context) {
+	// Проверяем Content-Type
+	if ctx.GetHeader("Content-Type") != "text/plain" {
+
+		ctx.String(http.StatusUnsupportedMediaType, "unsupported content type")
+		return
+	}
+
+	partsURL := strings.Split(strings.TrimPrefix(ctx.Request.URL.Path, "/"), "/") // убираем первый / и сплитим
+
+	if len(partsURL) != 3 {
+		ctx.String(http.StatusNotFound, "Not found")
+		return
+	}
+
+	metricName := partsURL[2]
+
+	metricVal, exists := h.storage.GetCounter(metricName)
+
+	if !exists {
+		ctx.String(http.StatusNotFound, "metric doesn't exist")
+		return
+	}
+
+	ctx.String(http.StatusOK, strconv.FormatInt(metricVal, 10))
+
 }

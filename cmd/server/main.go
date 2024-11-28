@@ -1,14 +1,17 @@
 package main
 
 import (
-	"fmt"
+	"github.com/gin-gonic/gin"
+	"log"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/storage"
 	"net/http"
 )
 
 func main() {
-	mux := http.NewServeMux()
+
+	server := gin.Default()
+	server.LoadHTMLGlob("internal/server/templates/*")
 
 	// Создаем хранилища
 	metricsStorage := storage.NewMetricsStorage()
@@ -16,16 +19,24 @@ func main() {
 	// Создаем handler's
 	counterHandler := handler.NewCounterHandler(metricsStorage)
 	gaugeHandler := handler.NewGaugeHandler(metricsStorage)
+	htmlHandler := handler.NewHTMLHandler(metricsStorage)
 
-	mux.HandleFunc("/update/counter/", counterHandler.Update)
-	mux.HandleFunc("/update/gauge/", gaugeHandler.Update)
+	// Рутинг
+	server.POST("/update/counter/:metricName/:metricVal", counterHandler.Update)
+	server.GET("/value/counter/:metricName", counterHandler.Get)
 
-	mux.HandleFunc("/update/", func(w http.ResponseWriter, req *http.Request) {
-		http.Error(w, "unsupported metric type", http.StatusBadRequest)
+	server.POST("/update/gauge/:metricName/:metricVal", gaugeHandler.Update)
+	server.GET("/value/gauge/:metricName", gaugeHandler.Get)
+
+	server.GET("/", htmlHandler.Get)
+
+	server.Any("/update/", func(ctx *gin.Context) {
+		ctx.String(http.StatusBadRequest, "unsupported metric type")
 	})
 
-	err := http.ListenAndServe("localhost:8080", mux)
+	err := server.Run("localhost:8080")
 	if err != nil {
-		fmt.Printf("Failed to start server: %v", err)
+		log.Fatalf("Failed to start server: %v", err)
 	}
+
 }
