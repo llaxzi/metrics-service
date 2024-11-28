@@ -5,7 +5,6 @@ import (
 	"log"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/storage"
-	"net/http"
 )
 
 func main() {
@@ -17,23 +16,19 @@ func main() {
 	metricsStorage := storage.NewMetricsStorage()
 
 	// Создаем handler's
-	counterHandler := handler.NewCounterHandler(metricsStorage)
-	gaugeHandler := handler.NewGaugeHandler(metricsStorage)
+
+	updateHandler := handler.NewUpdateHandler(metricsStorage)
+
 	htmlHandler := handler.NewHTMLHandler(metricsStorage)
 
 	// Рутинг
-	server.POST("/update/counter/:metricName/:metricVal", counterHandler.Update)
-	server.GET("/value/counter/:metricName", counterHandler.Get)
+	server.POST("/update/:metricType/:metricName/:metricVal", updateHandler.Update)
 
-	server.POST("/update/gauge/:metricName/:metricVal", gaugeHandler.Update)
-	server.GET("/value/gauge/:metricName", gaugeHandler.Get)
+	//server.GET("/value/counter/:metricName", counterHandler.Get)
+
+	//server.GET("/value/gauge/:metricName", gaugeHandler.Get)
 
 	server.GET("/", htmlHandler.Get)
-
-	// Обработка invalid metric type
-	server.Any("/update/:metricType/*remaining", func(ctx *gin.Context) {
-		ctx.String(http.StatusBadRequest, "unsupported metric type")
-	})
 
 	err := server.Run("localhost:8080")
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 
 type MetricsHandler interface {
 	Update(ctx *gin.Context)
-	Get(ctx *gin.Context)
+	//Get(ctx *gin.Context)
 }
 
 type counterHandler struct {
