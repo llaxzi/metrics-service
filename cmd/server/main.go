@@ -17,16 +17,14 @@ func main() {
 
 	// Создаем handler's
 
-	updateHandler := handler.NewUpdateHandler(metricsStorage)
+	metricsHandler := handler.NewMetricsHandler(metricsStorage)
 
 	htmlHandler := handler.NewHTMLHandler(metricsStorage)
 
 	// Рутинг
-	server.POST("/update/:metricType/:metricName/:metricVal", updateHandler.Update)
+	server.POST("/update/:metricType/:metricName/:metricVal", metricsHandler.Update)
 
-	//server.GET("/value/counter/:metricName", counterHandler.Get)
-
-	//server.GET("/value/gauge/:metricName", gaugeHandler.Get)
+	server.GET("/value/:metricType/:metricName", metricsHandler.Get)
 
 	server.GET("/", htmlHandler.Get)
 

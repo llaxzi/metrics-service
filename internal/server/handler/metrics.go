@@ -8,19 +8,24 @@ import (
 	"strconv"
 )
 
-func NewUpdateHandler(storage storage.MetricsStorage) MetricsHandler {
-	return &updateHandler{storage}
+type MetricsHandler interface {
+	Update(ctx *gin.Context)
+	Get(ctx *gin.Context)
 }
 
-type updateHandler struct {
+func NewMetricsHandler(storage storage.MetricsStorage) MetricsHandler {
+	return &metricsHandler{storage}
+}
+
+type metricsHandler struct {
 	storage storage.MetricsStorage
 }
 
-func (h *updateHandler) Update(ctx *gin.Context) {
+func (h *metricsHandler) Update(ctx *gin.Context) {
 
 	fmt.Println("update handler")
 
-	// Проверка Content-Type
+	// Проверяем Content-Type
 	if ctx.GetHeader("Content-Type") != "text/plain" {
 		ctx.String(http.StatusUnsupportedMediaType, "unsupported content type")
 		return
@@ -44,7 +49,7 @@ func (h *updateHandler) Update(ctx *gin.Context) {
 			ctx.String(http.StatusBadRequest, "wrong metric value")
 			return
 		}
-		// TODO: Передать в сервис для обработки
+		// TODO: Вынести в сервис
 		h.storage.SetCounter(metricName, metricVal)
 
 	case "gauge":
@@ -53,7 +58,7 @@ func (h *updateHandler) Update(ctx *gin.Context) {
 			ctx.String(http.StatusBadRequest, "wrong metric value")
 			return
 		}
-		// TODO: Передать в сервис для обработки
+		// TODO: Вынести в сервис
 		h.storage.SetGauge(metricName, metricVal)
 
 	default:
@@ -62,4 +67,35 @@ func (h *updateHandler) Update(ctx *gin.Context) {
 	}
 
 	ctx.String(http.StatusOK, "updated successfully")
+}
+
+func (h *metricsHandler) Get(ctx *gin.Context) {
+	// Проверяем Content-Type
+	if ctx.GetHeader("Content-Type") != "text/plain" {
+
+		ctx.String(http.StatusUnsupportedMediaType, "unsupported content type")
+		return
+	}
+
+	metricName := ctx.Param("metricName")
+	metricType := ctx.Param("metricType")
+
+	switch metricType {
+	case "counter":
+		metricVal, exists := h.storage.GetCounter(metricName)
+		if !exists {
+			ctx.String(http.StatusNotFound, "metric doesn't exist")
+			return
+		}
+		ctx.String(http.StatusOK, strconv.FormatInt(metricVal, 10))
+	case "gauge":
+		metricVal, exists := h.storage.GetGauge(metricName)
+
+		if !exists {
+			ctx.String(http.StatusNotFound, "metric doesn't exist")
+			return
+		}
+		ctx.String(http.StatusOK, strconv.FormatFloat(metricVal, 'f', -1, 64))
+	}
+
 }
