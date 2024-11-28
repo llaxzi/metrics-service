@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/storage"
 	"net/http"
@@ -71,20 +70,9 @@ func (h *gaugeHandler) Get(ctx *gin.Context) {
 		return
 	}
 
-	partsURL := strings.Split(strings.TrimPrefix(ctx.Request.URL.Path, "/"), "/") // убираем первый / и сплитим
-
-	if len(partsURL) != 3 {
-		ctx.String(http.StatusNotFound, "Not found")
-		return
-	}
-
-	fmt.Println(partsURL)
-
-	metricName := partsURL[2]
-	fmt.Println("Metric name:", metricName)
+	metricName := ctx.Param("")
 
 	metricVal, exists := h.storage.GetGauge(metricName)
-	fmt.Println("Exists: ", exists, " Val: metricVal")
 
 	if !exists {
 		ctx.String(http.StatusNotFound, "metric doesn't exist")

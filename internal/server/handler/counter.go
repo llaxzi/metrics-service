@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/storage"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 type MetricsHandler interface {
@@ -31,20 +29,8 @@ func (h *counterHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	// Парсим url
-	/*
-		формат: http://<АДРЕС_СЕРВЕРА>/update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-		req.URL.Path возвращает /update/<ТИП_МЕТРИКИ>/<ИМЯ_МЕТРИКИ>/<ЗНАЧЕНИЕ_МЕТРИКИ>
-	*/
-	partsURL := strings.Split(strings.TrimPrefix(ctx.Request.URL.Path, "/"), "/") // убираем первый / и сплитим
-
-	if len(partsURL) != 4 {
-		ctx.String(http.StatusNotFound, "Not found")
-		return
-	}
-
-	metricName := partsURL[2]
-	metricValStr := partsURL[3]
+	metricName := ctx.Param("metricName")
+	metricValStr := ctx.Param("metricVal")
 
 	metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
 	if err != nil {
@@ -54,9 +40,6 @@ func (h *counterHandler) Update(ctx *gin.Context) {
 
 	// TODO вынести в сервис
 	h.storage.SetCounter(metricName, metricVal)
-
-	fmt.Print("PollCount= ")
-	fmt.Println(h.storage.GetCounter("PollCount"))
 
 	ctx.String(http.StatusOK, "updated successfully")
 }
@@ -69,14 +52,7 @@ func (h *counterHandler) Get(ctx *gin.Context) {
 		return
 	}
 
-	partsURL := strings.Split(strings.TrimPrefix(ctx.Request.URL.Path, "/"), "/") // убираем первый / и сплитим
-
-	if len(partsURL) != 3 {
-		ctx.String(http.StatusNotFound, "Not found")
-		return
-	}
-
-	metricName := partsURL[2]
+	metricName := ctx.Param("metricName")
 
 	metricVal, exists := h.storage.GetCounter(metricName)
 
