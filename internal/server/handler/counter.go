@@ -58,7 +58,6 @@ func (h *counterHandler) Update(ctx *gin.Context) {
 	fmt.Print("PollCount= ")
 	fmt.Println(h.storage.GetCounter("PollCount"))
 
-	ctx.Set("Content-Type", "text/plain")
 	ctx.String(http.StatusOK, "updated successfully")
 }
 

@@ -30,7 +30,8 @@ func main() {
 
 	server.GET("/", htmlHandler.Get)
 
-	server.Any("/update/", func(ctx *gin.Context) {
+	// Обработка invalid metric type
+	server.Any("/update/:metricType/*remaining", func(ctx *gin.Context) {
 		ctx.String(http.StatusBadRequest, "unsupported metric type")
 	})
 
