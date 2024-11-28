@@ -3,7 +3,6 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/storage"
-	"net/http"
 )
 
 type HTMLHandler interface {
@@ -19,11 +18,6 @@ type htmlHandler struct {
 }
 
 func (h *htmlHandler) Get(ctx *gin.Context) {
-	if ctx.GetHeader("Content-Type") != "text/plain" {
-
-		ctx.String(http.StatusUnsupportedMediaType, "unsupported content type")
-		return
-	}
 
 	metrics := h.storage.GetMetrics()
 	ctx.HTML(200, "metrics.html", metrics)
