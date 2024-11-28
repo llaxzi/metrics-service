@@ -21,7 +21,7 @@ func main() {
 
 	htmlHandler := handler.NewHTMLHandler(metricsStorage)
 
-	// Рутинг
+	// Роутинг
 	server.POST("/update/:metricType/:metricName/:metricVal", metricsHandler.Update)
 
 	server.GET("/value/:metricType/:metricName", metricsHandler.Get)
