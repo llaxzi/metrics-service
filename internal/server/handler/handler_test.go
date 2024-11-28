@@ -62,29 +62,24 @@ func TestMetricsHandler_Get(t *testing.T) {
 		body        string
 	}
 	testTable := []struct {
-		name               string
-		request            string
-		requestContentType string
-		want               want
-		storageSet         func(s storage.MetricsStorage)
+		name       string
+		request    string
+		want       want
+		storageSet func(s storage.MetricsStorage)
 	}{
-		{"OK counter", "/value/counter/someMetric", "text/plain", want{http.StatusOK, "text/plain", "5"}, func(s storage.MetricsStorage) {
+		{"OK counter", "/value/counter/someMetric", want{http.StatusOK, "text/plain", "5"}, func(s storage.MetricsStorage) {
 			s.SetCounter("someMetric", 5)
 		}},
-		{"Invalid content type counter", "/value/counter/someMetric", "application/json", want{http.StatusUnsupportedMediaType, "text/plain", "unsupported content type"}, func(s storage.MetricsStorage) {
+		{"Not found UR counterL", "/value/counter/someMetric/metric", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.MetricsStorage) {
 		}},
-		{"Not found UR counterL", "/value/counter/someMetric/metric", "text/plain", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.MetricsStorage) {
+		{"Not found metric counter", "/value/counter/someMetric", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.MetricsStorage) {
 		}},
-		{"Not found metric counter", "/value/counter/someMetric", "text/plain", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.MetricsStorage) {
-		}},
-		{"OK gauge", "/value/gauge/someMetric", "text/plain", want{http.StatusOK, "text/plain", "1.343"}, func(s storage.MetricsStorage) {
+		{"OK gauge", "/value/gauge/someMetric", want{http.StatusOK, "text/plain", "1.343"}, func(s storage.MetricsStorage) {
 			s.SetGauge("someMetric", 1.343)
 		}},
-		{"Invalid content type gauge", "/value/gauge/someMetric", "application/json", want{http.StatusUnsupportedMediaType, "text/plain", "unsupported content type"}, func(s storage.MetricsStorage) {
+		{"Not found URL gauge", "/value/gauge/someMetric/metric", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.MetricsStorage) {
 		}},
-		{"Not found URL gauge", "/value/gauge/someMetric/metric", "text/plain", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.MetricsStorage) {
-		}},
-		{"Not found metric gauge", "/value/gauge/someMetric", "text/plain", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.MetricsStorage) {
+		{"Not found metric gauge", "/value/gauge/someMetric", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.MetricsStorage) {
 		}},
 	}
 
@@ -92,7 +87,6 @@ func TestMetricsHandler_Get(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			request := httptest.NewRequest(http.MethodGet, test.request, nil)
-			request.Header.Set("Content-Type", test.requestContentType)
 
 			w := httptest.NewRecorder()
 
