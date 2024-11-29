@@ -25,12 +25,6 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 
 	fmt.Println("update handler")
 
-	// Проверяем Content-Type
-	if ctx.GetHeader("Content-Type") != "text/plain" {
-		ctx.String(http.StatusUnsupportedMediaType, "unsupported content type")
-		return
-	}
-
 	metricType := ctx.Param("metricType")
 	metricName := ctx.Param("metricName")
 	metricValStr := ctx.Param("metricVal")
