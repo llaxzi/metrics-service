@@ -18,8 +18,19 @@ type htmlHandler struct {
 }
 
 func (h *htmlHandler) Get(ctx *gin.Context) {
-
 	metrics := h.storage.GetMetrics()
-	ctx.HTML(200, "metrics.html", metrics)
 
+	// Формирауем html
+
+	metricsHTML := "<h1>Metrics List</h1><div>"
+	if len(metrics) == 0 {
+		metricsHTML += "<p>No metrics available</p>"
+	} else {
+		for _, metric := range metrics {
+			metricsHTML += "<p>" + metric[0] + ": " + metric[1] + "</p>" // где metric []string, [0] - metricName, [1] - metricVal
+		}
+	}
+	metricsHTML += "</div>"
+
+	ctx.Data(200, "text/html", []byte(metricsHTML))
 }

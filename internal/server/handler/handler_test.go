@@ -122,7 +122,7 @@ func TestHtmlHandler_Get(t *testing.T) {
 		want       want
 		storageSet func(s storage.MetricsStorage)
 	}{
-		{"OK", "/", want{http.StatusOK, "text/html; charset=utf-8", `<!DOCTYPE html>
+		{"OK", "/", want{http.StatusOK, "text/html", `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">

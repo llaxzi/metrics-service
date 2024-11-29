@@ -14,7 +14,7 @@ type MetricsStorage interface {
 	GetGauge(key string) (float64, bool)
 	SetCounter(key string, value int64)
 	GetCounter(key string) (int64, bool)
-	GetMetrics() map[string]string
+	GetMetrics() [][]string
 }
 
 func NewMetricsStorage() MetricsStorage {
@@ -45,14 +45,15 @@ func (m *metricsStorage) GetCounter(key string) (int64, bool) {
 	return val, exists
 }
 
-func (m *metricsStorage) GetMetrics() map[string]string {
-	metrics := make(map[string]string)
+func (m *metricsStorage) GetMetrics() [][]string {
+	// Используем срез срезов, чтобы хранить одинаковые ключи разных типов
+	metrics := make([][]string, 0, len(m.gauge)+len(m.counter))
 
 	for metricName, metricVal := range m.counter {
-		metrics[metricName] = strconv.FormatInt(metricVal, 10)
+		metrics = append(metrics, []string{metricName, strconv.FormatInt(metricVal, 10)})
 	}
 	for metricName, metricVal := range m.gauge {
-		metrics[metricName] = strconv.FormatFloat(metricVal, 'f', -1, 64)
+		metrics = append(metrics, []string{metricName, strconv.FormatFloat(metricVal, 'f', -1, 64)})
 	}
 	return metrics
 }

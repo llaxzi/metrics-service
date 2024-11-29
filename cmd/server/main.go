@@ -9,8 +9,10 @@ import (
 
 func main() {
 
+	// Обрабатываем аргументы командной строки
+	parseFlags()
+
 	server := gin.Default()
-	server.LoadHTMLGlob("internal/server/templates/*")
 
 	// Создаем хранилища
 	metricsStorage := storage.NewMetricsStorage()
@@ -28,7 +30,7 @@ func main() {
 
 	server.GET("/", htmlHandler.Get)
 
-	err := server.Run("localhost:8080")
+	err := server.Run(flagRunAddr)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

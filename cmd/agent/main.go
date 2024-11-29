@@ -8,15 +8,17 @@ import (
 
 func main() {
 
+	// Парсим флаги
+	parseFlags()
+
 	// Создаем интерфейсы
 	metricsCollector := collector.NewMetricsCollector()
 	metricsSender := sender.NewSender("http://localhost:8080/update")
 
-	// Конфигурация агента
-	pollInterval := 2
-	reportInterval := 10
-
+	// Создаем агент с pollInterval и reportInterval, заданными через flags
 	a := agent.NewAgent(pollInterval, reportInterval, metricsCollector, metricsSender)
+
+	// Запускаем агент
 	a.Work()
 
 }
