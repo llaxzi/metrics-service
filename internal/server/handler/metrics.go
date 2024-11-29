@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/storage"
 	"net/http"
@@ -23,8 +22,6 @@ type metricsHandler struct {
 
 func (h *metricsHandler) Update(ctx *gin.Context) {
 
-	fmt.Println("update handler")
-
 	metricType := ctx.Param("metricType")
 	metricName := ctx.Param("metricName")
 	metricValStr := ctx.Param("metricVal")
@@ -36,6 +33,7 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 	}
 
 	// Парсим значение метрики в зависимости от типа
+	// TODO: Вынести в сервис
 	switch metricType {
 	case "counter":
 		metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
@@ -43,7 +41,6 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 			ctx.String(http.StatusBadRequest, "wrong metric value")
 			return
 		}
-		// TODO: Вынести в сервис
 		h.storage.SetCounter(metricName, metricVal)
 
 	case "gauge":
@@ -52,7 +49,6 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 			ctx.String(http.StatusBadRequest, "wrong metric value")
 			return
 		}
-		// TODO: Вынести в сервис
 		h.storage.SetGauge(metricName, metricVal)
 
 	default:
@@ -68,6 +64,7 @@ func (h *metricsHandler) Get(ctx *gin.Context) {
 	metricName := ctx.Param("metricName")
 	metricType := ctx.Param("metricType")
 
+	// TODO: Вынести в сервис
 	switch metricType {
 	case "counter":
 		metricVal, exists := h.storage.GetCounter(metricName)
