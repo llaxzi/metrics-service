@@ -14,7 +14,7 @@ func main() {
 
 	server := gin.Default()
 
-	// Создаем хранилища
+	// Создаем хранилище
 	metricsStorage := storage.NewMetricsStorage()
 
 	// Создаем handler's

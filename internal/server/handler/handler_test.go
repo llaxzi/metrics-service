@@ -188,7 +188,7 @@ func TestHtmlHandler_Get(t *testing.T) {
 
 			assert.Equal(t, test.want.contentType, w.Header().Get("Content-Type"))
 
-			//assert.Equal(t, test.want.body, w.Body.String()) // при комите почему-то темлпейт или body изменяется, тест перестает проходить
+			//assert.Equal(t, test.want.body, w.Body.String()) // при комите почему-то темлпейт или body изменяется, тест перестает проходить. Проблема с невидимыми символами.
 
 		})
 	}

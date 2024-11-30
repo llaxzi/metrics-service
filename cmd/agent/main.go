@@ -8,7 +8,7 @@ import (
 
 func main() {
 
-	// Парсим флаги
+	// Получаем config (flags или env)
 	parseFlags()
 
 	// Создаем интерфейсы
@@ -17,7 +17,7 @@ func main() {
 	baseURL := "http://" + serverHost + "/update"
 	metricsSender := sender.NewSender(baseURL)
 
-	// Создаем агент с pollInterval и reportInterval, заданными через flags
+	// Создаем агент
 	a := agent.NewAgent(pollInterval, reportInterval, metricsCollector, metricsSender)
 
 	// Запускаем агент
