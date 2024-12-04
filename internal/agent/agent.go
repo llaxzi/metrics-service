@@ -44,9 +44,16 @@ func (a *agent) Work() {
 			a.mu.Unlock()
 		case <-reportTicker.C:
 			a.mu.Lock()
-			a.sender.Send(a.metrics)
-			fmt.Printf("Send metrics \n")
-			a.pollCount = 0 // Сбрасываем, т.к. метрика типа counter
+
+			err := a.sender.Send(a.metrics)
+			if err != nil {
+				fmt.Println(err)
+
+			} else {
+				fmt.Println("Send metrics")
+				a.pollCount = 0 // Сбрасываем при успешной отправке, т.к. метрика типа counter
+			}
+
 			a.mu.Unlock()
 		}
 	}

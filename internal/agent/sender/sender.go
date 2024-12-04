@@ -8,7 +8,7 @@ import (
 )
 
 type Sender interface {
-	Send(metricsMap map[string]interface{})
+	Send(metricsMap map[string]interface{}) error
 }
 
 type sender struct {
@@ -20,7 +20,7 @@ func NewSender(baseURL string) Sender {
 	return &sender{&http.Client{}, baseURL}
 }
 
-func (s *sender) Send(metricsMap map[string]interface{}) {
+func (s *sender) Send(metricsMap map[string]interface{}) error {
 	for metricName, metricVal := range metricsMap {
 
 		var metricType string
@@ -39,7 +39,7 @@ func (s *sender) Send(metricsMap map[string]interface{}) {
 		case float64:
 			metricValStr = strconv.FormatFloat(metricVal.(float64), 'f', -1, 64)
 		default:
-			fmt.Printf("Wrong metric value type: %v", v)
+			return fmt.Errorf("wrong metric value type: %v", v)
 		}
 
 		url := s.baseURL + "/" + metricType + "/" + metricName + "/" + metricValStr
@@ -49,15 +49,14 @@ func (s *sender) Send(metricsMap map[string]interface{}) {
 
 		resp, err := client.R().Post(url)
 		if err != nil {
-			fmt.Printf("failed to send request: %v\n", err)
-			continue
+			return fmt.Errorf("failed to send request: %v\n", err)
 		}
 
 		if resp.StatusCode() != 200 {
-			fmt.Printf("request %v failed: %v\n", url, err)
-			continue
+			return fmt.Errorf("request %v failed: %v\n", url, err)
 		}
 
 	}
 	fmt.Println("All metrics send to server")
+	return nil
 }
