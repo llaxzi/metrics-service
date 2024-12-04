@@ -49,11 +49,11 @@ func (s *sender) Send(metricsMap map[string]interface{}) error {
 
 		resp, err := client.R().Post(url)
 		if err != nil {
-			return fmt.Errorf("failed to send request: %v\n", err)
+			return fmt.Errorf("failed to send request: %v", err)
 		}
 
 		if resp.StatusCode() != 200 {
-			return fmt.Errorf("request %v failed: %v\n", url, err)
+			return fmt.Errorf("request %v failed: %v", url, err)
 		}
 
 	}
