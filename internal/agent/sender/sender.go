@@ -3,12 +3,13 @@ package sender
 import (
 	"fmt"
 	"github.com/go-resty/resty/v2"
+	"metrics-service/internal/server/models"
 	"net/http"
 	"strconv"
 )
 
 type Sender interface {
-	Send(metricsMap map[string]interface{}) error
+	SendJSON(metricsMap map[string]interface{}) error
 }
 
 type sender struct {
@@ -48,6 +49,50 @@ func (s *sender) Send(metricsMap map[string]interface{}) error {
 		client.SetHeader("Content-type", "text/plain")
 
 		resp, err := client.R().Post(url)
+		if err != nil {
+			return fmt.Errorf("failed to send request: %v", err)
+		}
+
+		if resp.StatusCode() != 200 {
+			return fmt.Errorf("request %v failed: %v", url, err)
+		}
+
+	}
+	fmt.Println("All metrics send to server")
+	return nil
+}
+
+func (s *sender) SendJSON(metricsMap map[string]interface{}) error {
+	for metricName, metricValI := range metricsMap {
+
+		var body models.Metrics
+		switch metricName {
+		case "PollCount":
+			metricType := "counter"
+
+			metricVal, ok := metricValI.(int64)
+			if !ok {
+				return fmt.Errorf("invalid type for counter metric: %v", metricName)
+			}
+
+			body = models.Metrics{ID: metricName, MType: metricType, Delta: &metricVal}
+		default:
+			metricType := "gauge"
+
+			metricVal, ok := metricValI.(float64)
+			if !ok {
+				return fmt.Errorf("invalid type for gauge metric: %v", metricName)
+			}
+
+			body = models.Metrics{ID: metricName, MType: metricType, Value: &metricVal}
+		}
+
+		url := s.baseURL
+
+		client := resty.New()
+		client.SetHeader("Content-type", "application/json")
+
+		resp, err := client.R().SetBody(body).Post(url)
 		if err != nil {
 			return fmt.Errorf("failed to send request: %v", err)
 		}

@@ -37,10 +37,12 @@ func main() {
 	server.Use(mid.WithLogging())
 
 	server.POST("/update/:metricType/:metricName/:metricVal", metricsHandler.Update)
-
 	server.GET("/value/:metricType/:metricName", metricsHandler.Get)
 
 	server.GET("/", htmlHandler.Get)
+
+	server.POST("/update/", metricsHandler.UpdateJSON)
+	server.POST("/value/", metricsHandler.GetJSON)
 
 	err = server.Run(flagRunAddr)
 	if err != nil {

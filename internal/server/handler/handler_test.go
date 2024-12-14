@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"html/template"
+	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/storage"
 	"net/http"
 	"net/http/httptest"
@@ -193,4 +196,110 @@ func TestHtmlHandler_Get(t *testing.T) {
 		})
 	}
 
+}
+
+func TestMetricsHandler_UpdateJSON(t *testing.T) {
+	type want struct {
+		statusCode  int
+		contentType string
+	}
+
+	testTable := []struct {
+		name    string
+		request models.Metrics
+		want    want
+	}{
+		{
+			"Valid Counter Update",
+			models.Metrics{ID: "PollCounter", MType: "counter", Delta: int64Ptr(2)},
+			want{http.StatusOK, "application/json; charset=utf-8"},
+		},
+		{
+			"Valid Gauge Update",
+			models.Metrics{ID: "PollGauge", MType: "gauge", Value: float64Ptr(3.14)},
+			want{http.StatusOK, "application/json; charset=utf-8"},
+		},
+		{
+			"Invalid Metric Type",
+			models.Metrics{ID: "InvalidMetric", MType: "unknown"},
+			want{http.StatusBadRequest, "text/plain; charset=utf-8"},
+		},
+	}
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+			jsonData, _ := json.Marshal(test.request)
+			request := httptest.NewRequest(http.MethodPost, "/update", bytes.NewReader(jsonData))
+			request.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			router := gin.Default()
+			metricsStorage := storage.NewMetricsStorage()
+			metricsH := NewMetricsHandler(metricsStorage)
+			router.POST("/update", metricsH.UpdateJSON)
+
+			router.ServeHTTP(w, request)
+			assert.Equal(t, test.want.statusCode, w.Code)
+			assert.Equal(t, test.want.contentType, w.Header().Get("Content-Type"))
+		})
+	}
+}
+
+func TestMetricsHandler_GetJSON(t *testing.T) {
+	type want struct {
+		statusCode  int
+		contentType string
+		response    models.Metrics
+	}
+	testTable := []struct {
+		name    string
+		request models.Metrics
+		want    want
+		setup   func(storage.MetricsStorage)
+	}{
+		{
+			"Existing Counter",
+			models.Metrics{ID: "someCounter", MType: "counter"},
+			want{http.StatusOK, "application/json; charset=utf-8", models.Metrics{ID: "someCounter", MType: "counter", Delta: int64Ptr(10)}},
+			func(s storage.MetricsStorage) { s.SetCounter("someCounter", 10) },
+		},
+		{
+			"Existing Gauge",
+			models.Metrics{ID: "someGauge", MType: "gauge"},
+			want{http.StatusOK, "application/json; charset=utf-8", models.Metrics{ID: "someGauge", MType: "gauge", Value: float64Ptr(15.5)}},
+			func(s storage.MetricsStorage) { s.SetGauge("someGauge", 15.5) },
+		},
+	}
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+			metricsStorage := storage.NewMetricsStorage()
+			test.setup(metricsStorage)
+
+			jsonData, _ := json.Marshal(test.request)
+			request := httptest.NewRequest(http.MethodPost, "/value", bytes.NewReader(jsonData))
+			request.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			metricsH := NewMetricsHandler(metricsStorage)
+			router := gin.Default()
+			router.POST("/value", metricsH.GetJSON)
+
+			router.ServeHTTP(w, request)
+			assert.Equal(t, test.want.statusCode, w.Code)
+			assert.Equal(t, test.want.contentType, w.Header().Get("Content-Type"))
+
+			var response models.Metrics
+			json.NewDecoder(w.Body).Decode(&response)
+			assert.Equal(t, test.want.response, response)
+		})
+	}
+}
+
+func int64Ptr(i int64) *int64 {
+	return &i
+}
+
+func float64Ptr(f float64) *float64 {
+	return &f
 }

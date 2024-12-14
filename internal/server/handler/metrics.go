@@ -1,7 +1,9 @@
 package handler
 
 import (
+	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/storage"
 	"net/http"
 	"strconv"
@@ -10,6 +12,8 @@ import (
 type MetricsHandler interface {
 	Update(ctx *gin.Context)
 	Get(ctx *gin.Context)
+	UpdateJSON(ctx *gin.Context)
+	GetJSON(ctx *gin.Context)
 }
 
 func NewMetricsHandler(storage storage.MetricsStorage) MetricsHandler {
@@ -83,4 +87,89 @@ func (h *metricsHandler) Get(ctx *gin.Context) {
 		ctx.String(http.StatusOK, strconv.FormatFloat(metricVal, 'f', -1, 64))
 	}
 
+}
+
+// JSON
+
+func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
+
+	contentType := ctx.GetHeader("Content-type")
+	if contentType != "application/json" {
+		ctx.String(http.StatusBadRequest, "invalid content type")
+		return
+	}
+
+	var requestData models.Metrics
+	dec := json.NewDecoder(ctx.Request.Body)
+	err := dec.Decode(&requestData)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	// Парсим значение метрики в зависимости от типа
+	// TODO: Вынести в сервис
+	switch requestData.MType {
+	case "counter":
+		h.storage.SetCounter(requestData.ID, *requestData.Delta)
+
+		actualVal, exists := h.storage.GetCounter(requestData.ID)
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			return
+		}
+		*requestData.Delta = actualVal
+
+	case "gauge":
+		h.storage.SetGauge(requestData.ID, *requestData.Value)
+		actualVal, exists := h.storage.GetGauge(requestData.ID)
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			return
+		}
+		*requestData.Value = actualVal
+
+	default:
+		ctx.String(http.StatusBadRequest, "invalid metric type")
+		return
+	}
+	ctx.JSON(http.StatusOK, requestData)
+}
+
+func (h *metricsHandler) GetJSON(ctx *gin.Context) {
+
+	contentType := ctx.GetHeader("Content-type")
+	if contentType != "application/json" {
+		ctx.String(http.StatusBadRequest, "invalid content type")
+		return
+	}
+
+	var requestData models.Metrics
+	dec := json.NewDecoder(ctx.Request.Body)
+	err := dec.Decode(&requestData)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "invalid JSON")
+		return
+	}
+
+	// TODO: Вынести в сервис
+	switch requestData.MType {
+	case "counter":
+		metricVal, exists := h.storage.GetCounter(requestData.ID)
+		if !exists {
+			ctx.String(http.StatusNotFound, "metric doesn't exist")
+			return
+		}
+		requestData.Delta = &metricVal
+	case "gauge":
+		metricVal, exists := h.storage.GetGauge(requestData.ID)
+
+		if !exists {
+			ctx.String(http.StatusNotFound, "metric doesn't exist")
+			return
+		}
+		requestData.Value = &metricVal
+	}
+
+	ctx.JSON(http.StatusOK, requestData)
 }
