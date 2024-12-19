@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"html/template"
 	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/storage"
@@ -222,7 +223,7 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 		{
 			"Invalid Metric Type",
 			models.Metrics{ID: "InvalidMetric", MType: "unknown"},
-			want{http.StatusBadRequest, "text/plain; charset=utf-8"},
+			want{http.StatusBadRequest, "application/json; charset=utf-8"},
 		},
 	}
 
@@ -249,7 +250,7 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 	type want struct {
 		statusCode  int
 		contentType string
-		response    models.Metrics
+		response    interface{}
 	}
 	testTable := []struct {
 		name    string
@@ -268,6 +269,14 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 			models.Metrics{ID: "someGauge", MType: "gauge"},
 			want{http.StatusOK, "application/json; charset=utf-8", models.Metrics{ID: "someGauge", MType: "gauge", Value: float64Ptr(15.5)}},
 			func(s storage.MetricsStorage) { s.SetGauge("someGauge", 15.5) },
+		},
+		{"Not existing Counter", models.Metrics{ID: "someCounter", MType: "counter"},
+			want{http.StatusNotFound, "application/json; charset=utf-8", gin.H{"error": "metric doesn't exist"}},
+			func(s storage.MetricsStorage) {},
+		},
+		{"Not existing Gauge", models.Metrics{ID: "someGauge", MType: "gauge"},
+			want{http.StatusNotFound, "application/json; charset=utf-8", gin.H{"error": "metric doesn't exist"}},
+			func(s storage.MetricsStorage) {},
 		},
 	}
 
@@ -289,9 +298,18 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 			assert.Equal(t, test.want.statusCode, w.Code)
 			assert.Equal(t, test.want.contentType, w.Header().Get("Content-Type"))
 
-			var response models.Metrics
-			json.NewDecoder(w.Body).Decode(&response)
-			assert.Equal(t, test.want.response, response)
+			if w.Code == http.StatusOK {
+				var response models.Metrics
+				err := json.NewDecoder(w.Body).Decode(&response)
+				require.NoError(t, err)
+				assert.Equal(t, test.want.response, response)
+			} else {
+				var errResponse gin.H
+				err := json.NewDecoder(w.Body).Decode(&errResponse)
+				require.NoError(t, err)
+				assert.Equal(t, test.want.response, errResponse)
+			}
+
 		})
 	}
 }

@@ -95,7 +95,7 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 
 	contentType := ctx.GetHeader("Content-type")
 	if contentType != "application/json" {
-		ctx.String(http.StatusBadRequest, "invalid content type")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid content type"})
 		return
 	}
 
@@ -103,7 +103,7 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 	dec := json.NewDecoder(ctx.Request.Body)
 	err := dec.Decode(&requestData)
 	if err != nil {
-		ctx.String(http.StatusBadRequest, "invalid JSON")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 		return
 	}
 
@@ -119,7 +119,6 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 			return
 		}
 		*requestData.Delta = actualVal
-
 	case "gauge":
 		h.storage.SetGauge(requestData.ID, *requestData.Value)
 		actualVal, exists := h.storage.GetGauge(requestData.ID)
@@ -130,7 +129,7 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 		*requestData.Value = actualVal
 
 	default:
-		ctx.String(http.StatusBadRequest, "invalid metric type")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid metric type"})
 		return
 	}
 	ctx.JSON(http.StatusOK, requestData)
@@ -140,7 +139,7 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 
 	contentType := ctx.GetHeader("Content-type")
 	if contentType != "application/json" {
-		ctx.String(http.StatusBadRequest, "invalid content type")
+		ctx.JSON(http.StatusBadRequest, "invalid content type")
 		return
 	}
 
@@ -148,7 +147,7 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 	dec := json.NewDecoder(ctx.Request.Body)
 	err := dec.Decode(&requestData)
 	if err != nil {
-		ctx.String(http.StatusBadRequest, "invalid JSON")
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 		return
 	}
 
@@ -157,7 +156,7 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 	case "counter":
 		metricVal, exists := h.storage.GetCounter(requestData.ID)
 		if !exists {
-			ctx.String(http.StatusNotFound, "metric doesn't exist")
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "metric doesn't exist"})
 			return
 		}
 		requestData.Delta = &metricVal
@@ -165,7 +164,7 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 		metricVal, exists := h.storage.GetGauge(requestData.ID)
 
 		if !exists {
-			ctx.String(http.StatusNotFound, "metric doesn't exist")
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "metric doesn't exist"})
 			return
 		}
 		requestData.Value = &metricVal
