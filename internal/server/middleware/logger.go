@@ -7,21 +7,12 @@ import (
 	"time"
 )
 
-type Middleware interface {
-	WithLogging() gin.HandlerFunc
-	Initialize(level string) error
-}
-
-func NewMiddleware() Middleware {
-	return &middleware{zap.NewNop()}
-}
-
 type middleware struct {
 	Log *zap.Logger // Log Синглтон.
 }
 
-// Initialize инициализирует синглтон логера с необходимым уровнем логирования.
-func (m *middleware) Initialize(level string) error {
+// InitializeZap инициализирует синглтон логера с необходимым уровнем логирования.
+func (m *middleware) InitializeZap(level string) error {
 
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {

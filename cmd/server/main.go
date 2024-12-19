@@ -15,7 +15,7 @@ func main() {
 
 	// Создаем логгер
 	mid := middleware.NewMiddleware()
-	err := mid.Initialize(flagLogLevel)
+	err := mid.InitializeZap(flagLogLevel)
 	if err != nil {
 		return
 	}
@@ -39,10 +39,13 @@ func main() {
 	server.POST("/update/:metricType/:metricName/:metricVal", metricsHandler.Update)
 	server.GET("/value/:metricType/:metricName", metricsHandler.Get)
 
-	server.GET("/", htmlHandler.Get)
+	gzipGroup := server.Group("")
+	gzipGroup.Use(mid.WithGzip())
 
-	server.POST("/update/", metricsHandler.UpdateJSON)
-	server.POST("/value/", metricsHandler.GetJSON)
+	gzipGroup.GET("/", htmlHandler.Get)
+
+	gzipGroup.POST("/update/", metricsHandler.UpdateJSON)
+	gzipGroup.POST("/value/", metricsHandler.GetJSON)
 
 	err = server.Run(flagRunAddr)
 	if err != nil {

@@ -1,6 +1,9 @@
 package sender
 
 import (
+	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
 	"metrics-service/internal/server/models"
@@ -87,12 +90,29 @@ func (s *sender) SendJSON(metricsMap map[string]interface{}) error {
 			body = models.Metrics{ID: metricName, MType: metricType, Value: &metricVal}
 		}
 
+		jsonData, err := json.Marshal(body)
+		if err != nil {
+			return fmt.Errorf("failed to marshal JSON: %v", err)
+		}
+
+		// Сжатие данных в gzip
+		var buf bytes.Buffer
+		gzipWriter := gzip.NewWriter(&buf)
+
+		_, err = gzipWriter.Write(jsonData)
+
+		if err = gzipWriter.Close(); err != nil {
+			return fmt.Errorf("failed to close gzip writer: %v", err)
+		}
+
 		url := s.baseURL
 
 		client := resty.New()
 		client.SetHeader("Content-type", "application/json")
+		client.SetHeader("Content-Encoding", "gzip")
 
-		resp, err := client.R().SetBody(body).Post(url)
+		// Resty автоматически сериализует в json
+		resp, err := client.R().SetBody(buf.Bytes()).Post(url)
 		if err != nil {
 			return fmt.Errorf("failed to send request: %v", err)
 		}
