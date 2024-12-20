@@ -20,7 +20,7 @@ type htmlHandler struct {
 func (h *htmlHandler) Get(ctx *gin.Context) {
 	metrics := h.storage.GetMetrics()
 
-	// Формирауем html
+	// Формируем html
 
 	metricsHTML := "<h1>Metrics List</h1><div>"
 	if len(metrics) == 0 {
