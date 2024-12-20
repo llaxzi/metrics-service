@@ -16,12 +16,14 @@ type MetricsHandler interface {
 	GetJSON(ctx *gin.Context)
 }
 
-func NewMetricsHandler(storage storage.MetricsStorage) MetricsHandler {
-	return &metricsHandler{storage}
+func NewMetricsHandler(storage storage.MetricsStorage, diskW storage.DiskWriter, isStoreInterval bool) MetricsHandler {
+	return &metricsHandler{storage, diskW, isStoreInterval}
 }
 
 type metricsHandler struct {
-	storage storage.MetricsStorage
+	storage         storage.MetricsStorage
+	diskW           storage.DiskWriter
+	isStoreInterval bool
 }
 
 func (h *metricsHandler) Update(ctx *gin.Context) {
@@ -58,6 +60,14 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 	default:
 		ctx.String(http.StatusBadRequest, "invalid metric type")
 		return
+	}
+
+	if !h.isStoreInterval {
+		err := h.diskW.Save()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			return
+		}
 	}
 
 	ctx.String(http.StatusOK, "updated successfully")
@@ -132,6 +142,15 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid metric type"})
 		return
 	}
+
+	if !h.isStoreInterval {
+		err := h.diskW.Save()
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			return
+		}
+	}
+
 	ctx.JSON(http.StatusOK, requestData)
 }
 

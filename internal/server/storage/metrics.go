@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"metrics-service/internal/server/models"
 	"strconv"
 	"sync"
 )
@@ -8,7 +9,7 @@ import (
 /*
 Хранилище метрик
 gauge - метрика текущего состояния системы. Новое значение всегда заменяет старое
-counter - метрика-счетчик событый (кол-во запросов и ошибок). Новое значение добавляется к существующему
+counter - метрика-счетчик событий (кол-во запросов и ошибок). Новое значение добавляется к существующему
 */
 
 // MetricsStorage Интерфейс взаимодействия с хранилищем
@@ -18,6 +19,8 @@ type MetricsStorage interface {
 	SetCounter(key string, value int64)
 	GetCounter(key string) (int64, bool)
 	GetMetrics() [][]string
+	GetMetricsJSON() []models.Metrics
+	SetMetricsJSON(metrics []models.Metrics)
 }
 
 func NewMetricsStorage() MetricsStorage {
@@ -75,4 +78,28 @@ func (m *metricsStorage) GetMetrics() [][]string {
 		metrics = append(metrics, []string{metricName, strconv.FormatFloat(metricVal, 'f', -1, 64)})
 	}
 	return metrics
+}
+
+func (m *metricsStorage) GetMetricsJSON() []models.Metrics {
+	var metrics []models.Metrics
+	for name, val := range m.gauge {
+		metrics = append(metrics, models.Metrics{ID: name, MType: "gauge", Value: &val})
+	}
+	for name, val := range m.counter {
+		metrics = append(metrics, models.Metrics{ID: name, MType: "counter", Delta: &val})
+	}
+	return metrics
+}
+
+func (m *metricsStorage) SetMetricsJSON(metrics []models.Metrics) {
+	for _, metric := range metrics {
+		switch metric.MType {
+		case "gauge":
+			m.SetGauge(metric.ID, *metric.Value)
+		case "counter":
+			m.SetCounter(metric.ID, *metric.Delta)
+		default:
+			continue
+		}
+	}
 }
