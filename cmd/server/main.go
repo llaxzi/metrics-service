@@ -55,13 +55,10 @@ func main() {
 		ticker := time.NewTicker(time.Duration(flagStoreInterval) * time.Second)
 		defer ticker.Stop()
 		go func() {
-			for {
-				select {
-				case <-ticker.C:
-					err := diskW.Save()
-					if err != nil {
-						log.Printf("Failed to save metrics: %v", err)
-					}
+			for range ticker.C {
+				err := diskW.Save()
+				if err != nil {
+					log.Printf("Failed to save metrics: %v", err)
 				}
 			}
 		}()

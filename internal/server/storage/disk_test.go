@@ -18,7 +18,6 @@ func TestDiskStorage(t *testing.T) {
 		t.Error(err)
 	}
 	saveResult := metricsSt.GetMetricsJSON()
-	diskW.Close()
 
 	metricsSt = NewMetricsStorage()
 	diskR, _ := NewDiskReader(metricsSt, fName)
