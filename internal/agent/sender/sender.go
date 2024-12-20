@@ -99,8 +99,9 @@ func (s *sender) SendJSON(metricsMap map[string]interface{}) error {
 		var buf bytes.Buffer
 		gzipWriter := gzip.NewWriter(&buf)
 
-		_, err = gzipWriter.Write(jsonData)
-
+		if _, err = gzipWriter.Write(jsonData); err != nil {
+			return fmt.Errorf("failed to gzip data: %v", err)
+		}
 		if err = gzipWriter.Close(); err != nil {
 			return fmt.Errorf("failed to close gzip writer: %v", err)
 		}
