@@ -48,7 +48,7 @@ func TestMetricsHandler_Update(t *testing.T) {
 
 		router := gin.Default()
 		metricsStorage := storage.NewMetricsStorage()
-		metricsH := NewMetricsHandler(metricsStorage)
+		metricsH := NewMetricsHandler(metricsStorage, nil, true)
 		router.POST("/update/:metricType/:metricName/:metricVal", metricsH.Update)
 
 		router.ServeHTTP(w, request)
@@ -97,7 +97,7 @@ func TestMetricsHandler_Get(t *testing.T) {
 			metricsStorage := storage.NewMetricsStorage()
 			test.storageSet(metricsStorage)
 
-			metricsH := NewMetricsHandler(metricsStorage)
+			metricsH := NewMetricsHandler(metricsStorage, nil, true)
 
 			router := gin.Default()
 
@@ -236,7 +236,7 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			w := httptest.NewRecorder()
 			router := gin.Default()
 			metricsStorage := storage.NewMetricsStorage()
-			metricsH := NewMetricsHandler(metricsStorage)
+			metricsH := NewMetricsHandler(metricsStorage, nil, true)
 			router.POST("/update", metricsH.UpdateJSON)
 
 			router.ServeHTTP(w, request)
@@ -290,7 +290,7 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 			request.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
-			metricsH := NewMetricsHandler(metricsStorage)
+			metricsH := NewMetricsHandler(metricsStorage, nil, false)
 			router := gin.Default()
 			router.POST("/value", metricsH.GetJSON)
 
