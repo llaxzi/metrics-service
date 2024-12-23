@@ -63,13 +63,13 @@ func (m *metricsStorage) GetCounter(key string) (int64, bool) {
 
 func (m *metricsStorage) GetMetrics() [][]string {
 
-	// Используем срез срезов, чтобы хранить одинаковые ключи разных типов
-	metrics := make([][]string, 0, len(m.gauge)+len(m.counter))
-
 	m.muGauge.RLock()
 	defer m.muGauge.RUnlock()
 	m.muCounter.RLock()
 	defer m.muCounter.RUnlock()
+
+	// Используем срез срезов, чтобы хранить одинаковые ключи разных типов
+	metrics := make([][]string, 0, len(m.gauge)+len(m.counter)) // len m.gauge и m.counter закрыты мьютексом
 
 	for metricName, metricVal := range m.counter {
 		metrics = append(metrics, []string{metricName, strconv.FormatInt(metricVal, 10)})
@@ -82,6 +82,12 @@ func (m *metricsStorage) GetMetrics() [][]string {
 
 func (m *metricsStorage) GetMetricsJSON() []models.Metrics {
 	var metrics []models.Metrics
+
+	m.muGauge.RLock()
+	defer m.muGauge.RUnlock()
+	m.muCounter.RLock()
+	defer m.muCounter.RUnlock()
+
 	for name, val := range m.gauge {
 		metrics = append(metrics, models.Metrics{ID: name, MType: "gauge", Value: &val})
 	}

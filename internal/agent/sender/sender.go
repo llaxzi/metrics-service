@@ -69,8 +69,8 @@ func (s *sender) SendJSON(metricsMap map[string]interface{}) error {
 	for metricName, metricValI := range metricsMap {
 
 		var body models.Metrics
-		switch metricName {
-		case "PollCount":
+
+		if metricName == "PollCount" {
 			metricType := "counter"
 
 			metricVal, ok := metricValI.(int64)
@@ -79,7 +79,7 @@ func (s *sender) SendJSON(metricsMap map[string]interface{}) error {
 			}
 
 			body = models.Metrics{ID: metricName, MType: metricType, Delta: &metricVal}
-		default:
+		} else {
 			metricType := "gauge"
 
 			metricVal, ok := metricValI.(float64)
