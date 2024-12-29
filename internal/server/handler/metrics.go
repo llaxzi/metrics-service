@@ -92,6 +92,11 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 		return
 	}
 
+	if requestData.MType == "counter" && requestData.Delta == nil || requestData.MType == "gauge" && requestData.Value == nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
+		return
+	}
+
 	err = h.service.UpdateJSON(&requestData)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
