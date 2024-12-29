@@ -17,7 +17,7 @@ type agent struct {
 	sender           sender2.Sender
 	pollInterval     int
 	reportInterval   int
-	pollCount        uint64
+	pollCount        int64
 	mu               sync.Mutex
 	metrics          map[string]interface{}
 }
@@ -45,7 +45,7 @@ func (a *agent) Work() {
 		case <-reportTicker.C:
 			a.mu.Lock()
 
-			err := a.sender.Send(a.metrics)
+			err := a.sender.SendJSON(a.metrics)
 			if err != nil {
 				fmt.Println(err)
 
