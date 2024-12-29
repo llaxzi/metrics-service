@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/models"
-	"metrics-service/internal/server/storage"
+	"metrics-service/internal/server/service"
 	"net/http"
-	"strconv"
 )
 
 type MetricsHandler interface {
@@ -16,13 +15,12 @@ type MetricsHandler interface {
 	GetJSON(ctx *gin.Context)
 }
 
-func NewMetricsHandler(storage storage.MetricsStorage, diskW storage.DiskWriter, isStoreInterval bool) MetricsHandler {
-	return &metricsHandler{storage, diskW, isStoreInterval}
+func NewMetricsHandler(service service.MetricsService, isStoreInterval bool) MetricsHandler {
+	return &metricsHandler{service, isStoreInterval}
 }
 
 type metricsHandler struct {
-	storage         storage.MetricsStorage
-	diskW           storage.DiskWriter
+	service         service.MetricsService
 	isStoreInterval bool
 }
 
@@ -38,34 +36,18 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	// Парсим значение метрики в зависимости от типа
-	// TODO: Вынести в сервис
-	switch metricType {
-	case "counter":
-		metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
-		if err != nil {
-			ctx.String(http.StatusBadRequest, "wrong metric value")
-			return
-		}
-		h.storage.SetCounter(metricName, metricVal)
-
-	case "gauge":
-		metricVal, err := strconv.ParseFloat(metricValStr, 64)
-		if err != nil {
-			ctx.String(http.StatusBadRequest, "wrong metric value")
-			return
-		}
-		h.storage.SetGauge(metricName, metricVal)
-
-	default:
-		ctx.String(http.StatusBadRequest, "invalid metric type")
+	// Обновляем значение метрики
+	err := h.service.Update(metricType, metricName, metricValStr)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Сохраняем на диск при синхронном режиме
 	if !h.isStoreInterval {
-		err := h.diskW.Save()
+		err = h.service.SaveDisk()
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	}
@@ -78,24 +60,12 @@ func (h *metricsHandler) Get(ctx *gin.Context) {
 	metricName := ctx.Param("metricName")
 	metricType := ctx.Param("metricType")
 
-	// TODO: Вынести в сервис
-	switch metricType {
-	case "counter":
-		metricVal, exists := h.storage.GetCounter(metricName)
-		if !exists {
-			ctx.String(http.StatusNotFound, "metric doesn't exist")
-			return
-		}
-		ctx.String(http.StatusOK, strconv.FormatInt(metricVal, 10))
-	case "gauge":
-		metricVal, exists := h.storage.GetGauge(metricName)
-
-		if !exists {
-			ctx.String(http.StatusNotFound, "metric doesn't exist")
-			return
-		}
-		ctx.String(http.StatusOK, strconv.FormatFloat(metricVal, 'f', -1, 64))
+	metricVal, err := h.service.Get(metricType, metricName)
+	if err != nil {
+		ctx.String(http.StatusNotFound, err.Error())
+		return
 	}
+	ctx.String(http.StatusOK, metricVal)
 
 }
 
@@ -117,36 +87,21 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 		return
 	}
 
-	// Парсим значение метрики в зависимости от типа
-	// TODO: Вынести в сервис
-	switch requestData.MType {
-	case "counter":
-		h.storage.SetCounter(requestData.ID, *requestData.Delta)
-
-		actualVal, exists := h.storage.GetCounter(requestData.ID)
-		if !exists {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
-			return
-		}
-		*requestData.Delta = actualVal
-	case "gauge":
-		h.storage.SetGauge(requestData.ID, *requestData.Value)
-		actualVal, exists := h.storage.GetGauge(requestData.ID)
-		if !exists {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
-			return
-		}
-		*requestData.Value = actualVal
-
-	default:
+	if requestData.MType != "counter" && requestData.MType != "gauge" {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid metric type"})
 		return
 	}
 
+	err = h.service.UpdateJSON(&requestData)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	if !h.isStoreInterval {
-		err := h.diskW.Save()
+		err = h.service.SaveDisk()
 		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "server error"})
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	}
@@ -170,24 +125,15 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 		return
 	}
 
-	// TODO: Вынести в сервис
-	switch requestData.MType {
-	case "counter":
-		metricVal, exists := h.storage.GetCounter(requestData.ID)
-		if !exists {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "metric doesn't exist"})
-			return
-		}
-		requestData.Delta = &metricVal
-	case "gauge":
-		metricVal, exists := h.storage.GetGauge(requestData.ID)
-
-		if !exists {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "metric doesn't exist"})
-			return
-		}
-		requestData.Value = &metricVal
+	if requestData.MType != "counter" && requestData.MType != "gauge" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid metric type"})
+		return
 	}
 
+	err = h.service.GetJSON(&requestData)
+	if err != nil {
+		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
 	ctx.JSON(http.StatusOK, requestData)
 }

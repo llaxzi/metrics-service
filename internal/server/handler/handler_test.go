@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"html/template"
 	"metrics-service/internal/server/models"
+	"metrics-service/internal/server/service"
 	"metrics-service/internal/server/storage"
 	"net/http"
 	"net/http/httptest"
@@ -48,7 +49,10 @@ func TestMetricsHandler_Update(t *testing.T) {
 
 		router := gin.Default()
 		metricsStorage := storage.NewMetricsStorage()
-		metricsH := NewMetricsHandler(metricsStorage, nil, true)
+
+		metricsService := service.NewMetricsService(metricsStorage, nil)
+		metricsH := NewMetricsHandler(metricsService, true)
+
 		router.POST("/update/:metricType/:metricName/:metricVal", metricsH.Update)
 
 		router.ServeHTTP(w, request)
@@ -97,7 +101,9 @@ func TestMetricsHandler_Get(t *testing.T) {
 			metricsStorage := storage.NewMetricsStorage()
 			test.storageSet(metricsStorage)
 
-			metricsH := NewMetricsHandler(metricsStorage, nil, true)
+			metricsService := service.NewMetricsService(metricsStorage, nil)
+
+			metricsH := NewMetricsHandler(metricsService, true)
 
 			router := gin.Default()
 
@@ -153,7 +159,8 @@ func TestHtmlHandler_Get(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			metricsStorage := storage.NewMetricsStorage()
-			htmlH := NewHTMLHandler(metricsStorage)
+			metricsService := service.NewHtmlService(metricsStorage)
+			htmlH := NewHTMLHandler(metricsService)
 
 			test.storageSet(metricsStorage)
 
@@ -236,7 +243,10 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			w := httptest.NewRecorder()
 			router := gin.Default()
 			metricsStorage := storage.NewMetricsStorage()
-			metricsH := NewMetricsHandler(metricsStorage, nil, true)
+
+			metricsService := service.NewMetricsService(metricsStorage, nil)
+			metricsH := NewMetricsHandler(metricsService, true)
+
 			router.POST("/update", metricsH.UpdateJSON)
 
 			router.ServeHTTP(w, request)
@@ -290,7 +300,10 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 			request.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
-			metricsH := NewMetricsHandler(metricsStorage, nil, false)
+
+			metricsService := service.NewMetricsService(metricsStorage, nil)
+			metricsH := NewMetricsHandler(metricsService, true)
+
 			router := gin.Default()
 			router.POST("/value", metricsH.GetJSON)
 

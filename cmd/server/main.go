@@ -5,6 +5,7 @@ import (
 	"log"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/middleware"
+	"metrics-service/internal/server/service"
 	"metrics-service/internal/server/storage"
 	"time"
 )
@@ -64,11 +65,16 @@ func main() {
 		}()
 	}
 
+	// Создаем service'ы
+
+	metricsService := service.NewMetricsService(metricsStorage, diskW)
+	htmlService := service.NewHtmlService(metricsStorage)
+
 	// Создаем handler's
 
-	metricsHandler := handler.NewMetricsHandler(metricsStorage, diskW, isStoreInterval)
+	metricsHandler := handler.NewMetricsHandler(metricsService, isStoreInterval)
 
-	htmlHandler := handler.NewHTMLHandler(metricsStorage)
+	htmlHandler := handler.NewHTMLHandler(htmlService)
 
 	// Роутинг
 
