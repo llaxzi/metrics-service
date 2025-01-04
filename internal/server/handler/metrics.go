@@ -13,6 +13,7 @@ type MetricsHandler interface {
 	Get(ctx *gin.Context)
 	UpdateJSON(ctx *gin.Context)
 	GetJSON(ctx *gin.Context)
+	Ping(ctx *gin.Context)
 }
 
 func NewMetricsHandler(service service.MetricsService, isStoreInterval bool) MetricsHandler {
@@ -141,4 +142,15 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, requestData)
+}
+
+// repository
+
+func (h *metricsHandler) Ping(ctx *gin.Context) {
+	err := h.service.Ping()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, "ok")
 }

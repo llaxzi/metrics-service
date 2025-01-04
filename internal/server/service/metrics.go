@@ -2,7 +2,9 @@ package service
 
 import (
 	"errors"
+	"log"
 	"metrics-service/internal/server/models"
+	"metrics-service/internal/server/repository"
 	"metrics-service/internal/server/storage"
 	"strconv"
 )
@@ -13,15 +15,17 @@ type MetricsService interface {
 	UpdateJSON(requestData *models.Metrics) error
 	GetJSON(requestData *models.Metrics) error
 	SaveDisk() error
+	Ping() error
 }
 
 type metricsService struct {
-	storage storage.MetricsStorage
-	diskW   storage.DiskWriter
+	storage    storage.MetricsStorage
+	diskW      storage.DiskWriter
+	repository repository.Repository
 }
 
-func NewMetricsService(storage storage.MetricsStorage, diskW storage.DiskWriter) MetricsService {
-	return &metricsService{storage, diskW}
+func NewMetricsService(storage storage.MetricsStorage, diskW storage.DiskWriter, repository repository.Repository) MetricsService {
+	return &metricsService{storage, diskW, repository}
 }
 
 func (s *metricsService) Update(metricType, metricName, metricValStr string) error {
@@ -105,6 +109,15 @@ func (s *metricsService) GetJSON(requestData *models.Metrics) error {
 			return errors.New("metric doesn't exist")
 		}
 		requestData.Value = &metricVal
+	}
+	return nil
+}
+
+func (s *metricsService) Ping() error {
+	err := s.repository.Ping()
+	if err != nil {
+		log.Printf(err.Error())
+		return errors.New("server error")
 	}
 	return nil
 }

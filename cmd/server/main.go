@@ -5,6 +5,7 @@ import (
 	"log"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/middleware"
+	"metrics-service/internal/server/repository"
 	"metrics-service/internal/server/service"
 	"metrics-service/internal/server/storage"
 	"time"
@@ -57,7 +58,7 @@ func main() {
 		defer ticker.Stop()
 		go func() {
 			for range ticker.C {
-				err := diskW.Save()
+				err = diskW.Save()
 				if err != nil {
 					log.Printf("Failed to save metrics: %v", err)
 				}
@@ -65,9 +66,14 @@ func main() {
 		}()
 	}
 
-	// Создаем service'ы
+	// Создаем repository
+	repo, err := repository.NewRepository(flagDatabaseDSN)
+	if err != nil {
+		log.Fatalf("Failed to initialize repository: %v", err)
+	}
 
-	metricsService := service.NewMetricsService(metricsStorage, diskW)
+	// Создаем service'ы
+	metricsService := service.NewMetricsService(metricsStorage, diskW, repo)
 	htmlService := service.NewHtmlService(metricsStorage)
 
 	// Создаем handler's
@@ -83,6 +89,7 @@ func main() {
 
 	server.POST("/update/:metricType/:metricName/:metricVal", metricsHandler.Update)
 	server.GET("/value/:metricType/:metricName", metricsHandler.Get)
+	server.GET("/ping", metricsHandler.Ping)
 
 	// Группа для методов с gzip
 	gzipGroup := server.Group("")
