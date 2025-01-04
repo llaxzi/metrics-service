@@ -3,10 +3,13 @@ package handler
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/gin-gonic/gin"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"html/template"
+	"metrics-service/internal/server/mocks"
 	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/service"
 	"metrics-service/internal/server/storage"
@@ -50,7 +53,7 @@ func TestMetricsHandler_Update(t *testing.T) {
 		router := gin.Default()
 		metricsStorage := storage.NewMetricsStorage()
 
-		metricsService := service.NewMetricsService(metricsStorage, nil)
+		metricsService := service.NewMetricsService(metricsStorage, nil, nil)
 		metricsH := NewMetricsHandler(metricsService, true)
 
 		router.POST("/update/:metricType/:metricName/:metricVal", metricsH.Update)
@@ -101,7 +104,7 @@ func TestMetricsHandler_Get(t *testing.T) {
 			metricsStorage := storage.NewMetricsStorage()
 			test.storageSet(metricsStorage)
 
-			metricsService := service.NewMetricsService(metricsStorage, nil)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil)
 
 			metricsH := NewMetricsHandler(metricsService, true)
 
@@ -244,7 +247,7 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			router := gin.Default()
 			metricsStorage := storage.NewMetricsStorage()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil)
 			metricsH := NewMetricsHandler(metricsService, true)
 
 			router.POST("/update", metricsH.UpdateJSON)
@@ -301,7 +304,7 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil)
 			metricsH := NewMetricsHandler(metricsService, true)
 
 			router := gin.Default()
@@ -325,6 +328,46 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 
 		})
 	}
+}
+
+func TestMetricsHandler_Ping(t *testing.T) {
+	testTable := []struct {
+		name string
+		want int
+	}{
+		{"OK", http.StatusOK},
+		{"Internal Server error", http.StatusInternalServerError},
+	}
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			// Мокаем репозиторий
+			ctrl := gomock.NewController(t)
+			repo := mocks.NewMockRepository(ctrl)
+
+			// Настраиваем поведение мока
+			if test.want == http.StatusOK {
+				repo.EXPECT().Ping().Return(nil)
+			} else {
+				repo.EXPECT().Ping().Return(errors.New("server error"))
+			}
+
+			metricsService := service.NewMetricsService(nil, nil, repo)
+			metricsH := NewMetricsHandler(metricsService, true)
+
+			request, _ := http.NewRequest(http.MethodGet, "/ping", nil)
+
+			router := gin.Default()
+			router.GET("/ping", metricsH.Ping)
+			router.ServeHTTP(w, request)
+
+			assert.Equal(t, w.Code, test.want)
+
+		})
+	}
+
 }
 
 func int64Ptr(i int64) *int64 {

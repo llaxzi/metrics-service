@@ -71,6 +71,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize repository: %v", err)
 	}
+	defer func(repo repository.Repository) {
+		err = repo.Close()
+		if err != nil {
+			log.Fatalf("Failed to close repository: %v", err)
+		}
+	}(repo)
 
 	// Создаем service'ы
 	metricsService := service.NewMetricsService(metricsStorage, diskW, repo)
