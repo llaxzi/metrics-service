@@ -80,7 +80,7 @@ func main() {
 
 	// Создаем service'ы
 	metricsService := service.NewMetricsService(metricsStorage, diskW, repo)
-	htmlService := service.NewHtmlService(metricsStorage)
+	htmlService := service.NewHTMLService(metricsStorage)
 
 	// Создаем handler's
 

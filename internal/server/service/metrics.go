@@ -116,7 +116,7 @@ func (s *metricsService) GetJSON(requestData *models.Metrics) error {
 func (s *metricsService) Ping() error {
 	err := s.repository.Ping()
 	if err != nil {
-		log.Printf(err.Error())
+		log.Print(err.Error())
 		return errors.New("server error")
 	}
 	return nil

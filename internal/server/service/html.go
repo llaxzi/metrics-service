@@ -2,19 +2,19 @@ package service
 
 import "metrics-service/internal/server/storage"
 
-type HtmlService interface {
-	GenerateHtml() string
+type HTMLService interface {
+	GenerateHTML() string
 }
 
 type htmlService struct {
 	storage storage.MetricsStorage
 }
 
-func NewHtmlService(storage storage.MetricsStorage) HtmlService {
+func NewHTMLService(storage storage.MetricsStorage) HTMLService {
 	return &htmlService{storage}
 }
 
-func (s *htmlService) GenerateHtml() string {
+func (s *htmlService) GenerateHTML() string {
 	metrics := s.storage.GetMetrics()
 
 	// Формируем html

@@ -162,7 +162,7 @@ func TestHtmlHandler_Get(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			metricsStorage := storage.NewMetricsStorage()
-			metricsService := service.NewHtmlService(metricsStorage)
+			metricsService := service.NewHTMLService(metricsStorage)
 			htmlH := NewHTMLHandler(metricsService)
 
 			test.storageSet(metricsStorage)
