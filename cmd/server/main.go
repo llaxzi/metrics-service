@@ -50,24 +50,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create disk writer: %v", err)
 	}
-	isStoreInterval := flagStoreInterval > 0
-
-	// Сохранение данных
-	if isStoreInterval {
-		ticker := time.NewTicker(time.Duration(flagStoreInterval) * time.Second)
-		defer ticker.Stop()
-		go func() {
-			for range ticker.C {
-				err = diskW.Save()
-				if err != nil {
-					log.Printf("Failed to save metrics: %v", err)
-				}
-			}
-		}()
-	}
 
 	// Создаем repository
-	repo, err := repository.NewRepository(flagDatabaseDSN)
+	repo, err := repository.NewRepository(flagDatabaseDSN, metricsStorage)
 	if err != nil {
 		log.Fatalf("Failed to initialize repository: %v", err)
 	}
@@ -77,6 +62,29 @@ func main() {
 			log.Fatalf("Failed to close repository: %v", err)
 		}
 	}(repo)
+
+	isStoreInterval := flagStoreInterval > 0
+	var saver interface{ Save() error }
+	if flagDatabaseDSN != "" {
+		saver = repo
+	} else if flagFileStoragePath != "" {
+		saver = diskW
+	} else {
+		saver = metricsStorage
+	}
+	// Сохранение данных
+	if isStoreInterval {
+		ticker := time.NewTicker(time.Duration(flagStoreInterval) * time.Second)
+		defer ticker.Stop()
+		go func() {
+			for range ticker.C {
+				err = saver.Save()
+				if err != nil {
+					log.Printf("Failed to save metrics: %v", err)
+				}
+			}
+		}()
+	}
 
 	// Создаем service'ы
 	metricsService := service.NewMetricsService(metricsStorage, diskW, repo)

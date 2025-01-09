@@ -23,7 +23,7 @@ func parseFlags() {
 	flag.StringVar(&flagFileStoragePath, "f", "metrics.json", "metrics store path")
 	flag.BoolVar(&flagRestore, "r", true, "load metrics bool")
 
-	flag.StringVar(&flagDatabaseDSN, "d", "host=localhost user=newuser password=qwerty dbname=practicum sslmode=disable", "database DSN")
+	flag.StringVar(&flagDatabaseDSN, "d", "", "database DSN")
 
 	flag.Parse()
 

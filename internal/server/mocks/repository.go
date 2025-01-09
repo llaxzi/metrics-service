@@ -47,6 +47,20 @@ func (mr *MockRepositoryMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close))
 }
 
+// CreateMetricsTable mocks base method.
+func (m *MockRepository) CreateMetricsTable() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateMetricsTable")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateMetricsTable indicates an expected call of CreateMetricsTable.
+func (mr *MockRepositoryMockRecorder) CreateMetricsTable() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMetricsTable", reflect.TypeOf((*MockRepository)(nil).CreateMetricsTable))
+}
+
 // Ping mocks base method.
 func (m *MockRepository) Ping() error {
 	m.ctrl.T.Helper()
@@ -59,4 +73,18 @@ func (m *MockRepository) Ping() error {
 func (mr *MockRepositoryMockRecorder) Ping() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ping", reflect.TypeOf((*MockRepository)(nil).Ping))
+}
+
+// Save mocks base method.
+func (m *MockRepository) Save() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Save")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Save indicates an expected call of Save.
+func (mr *MockRepositoryMockRecorder) Save() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRepository)(nil).Save))
 }
