@@ -56,6 +56,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize repository: %v", err)
 	}
+	if err = repo.CreateMetricsTable(); err != nil {
+		log.Printf("Failed to set up sql environment")
+	}
 	defer func(repo repository.Repository) {
 		err = repo.Close()
 		if err != nil {

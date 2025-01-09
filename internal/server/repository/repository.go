@@ -91,7 +91,7 @@ func (r *repository) Save() error {
 
 // CreateMetricsTable устанавливает бд в debug окружении
 func (r *repository) CreateMetricsTable() error {
-	//Удаляем таблицу и тип, если существуют
+	//Удаляем enum тип и таблицу, если существуют
 	dropTableQuery := `DROP TABLE IF EXISTS public.metrics;`
 	_, err := r.db.Exec(dropTableQuery)
 	if err != nil {
