@@ -142,7 +142,7 @@ func (r *repository) Bootstrap() error {
 	createTableQuery := `CREATE TABLE IF NOT EXISTS public.metrics (
 		metric_id VARCHAR(100) PRIMARY KEY,
 		metric_type MType,
-		delta INT,
+		delta BIGINT,
 		value DOUBLE PRECISION);`
 	_, err = tx.ExecContext(ctx, createTableQuery)
 	if err != nil {
