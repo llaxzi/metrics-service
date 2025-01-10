@@ -53,8 +53,8 @@ func TestMetricsHandler_Update(t *testing.T) {
 		router := gin.Default()
 		metricsStorage := storage.NewMetricsStorage()
 
-		metricsService := service.NewMetricsService(metricsStorage, nil, nil)
-		metricsH := NewMetricsHandler(metricsService, true)
+		metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
+		metricsH := NewMetricsHandler(metricsService)
 
 		router.POST("/update/:metricType/:metricName/:metricVal", metricsH.Update)
 
@@ -104,9 +104,9 @@ func TestMetricsHandler_Get(t *testing.T) {
 			metricsStorage := storage.NewMetricsStorage()
 			test.storageSet(metricsStorage)
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
 
-			metricsH := NewMetricsHandler(metricsService, true)
+			metricsH := NewMetricsHandler(metricsService)
 
 			router := gin.Default()
 
@@ -247,8 +247,8 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			router := gin.Default()
 			metricsStorage := storage.NewMetricsStorage()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil)
-			metricsH := NewMetricsHandler(metricsService, true)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
+			metricsH := NewMetricsHandler(metricsService)
 
 			router.POST("/update", metricsH.UpdateJSON)
 
@@ -304,8 +304,8 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil)
-			metricsH := NewMetricsHandler(metricsService, true)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
+			metricsH := NewMetricsHandler(metricsService)
 
 			router := gin.Default()
 			router.POST("/value", metricsH.GetJSON)
@@ -354,8 +354,8 @@ func TestMetricsHandler_Ping(t *testing.T) {
 				repo.EXPECT().Ping().Return(errors.New("server error"))
 			}
 
-			metricsService := service.NewMetricsService(nil, nil, repo)
-			metricsH := NewMetricsHandler(metricsService, true)
+			metricsService := service.NewMetricsService(nil, nil, repo, true)
+			metricsH := NewMetricsHandler(metricsService)
 
 			request, _ := http.NewRequest(http.MethodGet, "/ping", nil)
 
