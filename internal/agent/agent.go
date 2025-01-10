@@ -45,7 +45,7 @@ func (a *agent) Work() {
 		case <-reportTicker.C:
 			a.mu.Lock()
 
-			err := a.sender.SendJSON(a.metrics)
+			err := a.sender.SendBatch(a.metrics)
 			if err != nil {
 				fmt.Println(err)
 

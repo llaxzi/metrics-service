@@ -341,7 +341,6 @@ func TestMetricsHandler_Ping(t *testing.T) {
 
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
 
 			// Мокаем репозиторий
 			ctrl := gomock.NewController(t)
@@ -357,6 +356,7 @@ func TestMetricsHandler_Ping(t *testing.T) {
 			metricsService := service.NewMetricsService(nil, nil, repo, true)
 			metricsH := NewMetricsHandler(metricsService)
 
+			w := httptest.NewRecorder()
 			request, _ := http.NewRequest(http.MethodGet, "/ping", nil)
 
 			router := gin.Default()
@@ -368,6 +368,41 @@ func TestMetricsHandler_Ping(t *testing.T) {
 		})
 	}
 
+}
+
+func TestMetricsHandler_UpdateBatch(t *testing.T) {
+	testTable := []struct {
+		name string
+		want int
+		body []models.Metrics
+	}{
+		{name: "OK gauge", want: http.StatusOK, body: []models.Metrics{{ID: "Metric1", MType: "gauge", Value: float64Ptr(21.2)}}},
+		{name: "OK counter", want: http.StatusOK, body: []models.Metrics{{ID: "Metric2", MType: "counter", Delta: int64Ptr(12)}}},
+		{name: "Invalid JSON", want: http.StatusOK, body: []models.Metrics{{ID: "Metric3", Delta: int64Ptr(13)}}},
+	}
+
+	for _, test := range testTable {
+		t.Run(test.name, func(t *testing.T) {
+
+			body, err := json.Marshal(test.body)
+			assert.NoError(t, err)
+
+			request, err := http.NewRequest(http.MethodPost, "/updates", bytes.NewReader(body))
+			assert.NoError(t, err)
+			request.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			mStorage := storage.NewMetricsStorage()
+			metricsService := service.NewMetricsService(mStorage, nil, nil, true)
+			metricsH := NewMetricsHandler(metricsService)
+
+			router := gin.Default()
+			router.POST("/updates", metricsH.UpdateBatch)
+			router.ServeHTTP(w, request)
+
+			assert.Equal(t, test.want, w.Code)
+		})
+	}
 }
 
 func int64Ptr(i int64) *int64 {

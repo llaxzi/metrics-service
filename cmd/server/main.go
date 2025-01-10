@@ -71,7 +71,10 @@ func main() {
 	}(repo)
 
 	isStoreInterval := flagStoreInterval > 0
-	var saver interface{ Save() error }
+	var saver interface {
+		Save() error
+	}
+
 	switch {
 	case flagDatabaseDSN != "":
 		saver = repo
@@ -120,6 +123,7 @@ func main() {
 
 	gzipGroup.POST("/update/", metricsHandler.UpdateJSON)
 	gzipGroup.POST("/value/", metricsHandler.GetJSON)
+	gzipGroup.POST("/updates/", metricsHandler.UpdateBatch)
 
 	err := server.Run(flagRunAddr)
 	if err != nil {

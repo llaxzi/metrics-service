@@ -14,19 +14,20 @@ type MetricsService interface {
 	Get(metricType, metricName string) (string, error)
 	UpdateJSON(requestData *models.Metrics) error
 	GetJSON(requestData *models.Metrics) error
-	Save() error
 	Ping() error
+	Save() error
+	UpdateBatch([]models.Metrics) error
 }
 
 type metricsService struct {
 	storage         storage.MetricsStorage
-	saver           storage.DiskWriter
+	saver           interface{ Save() error }
 	repository      repository.Repository
 	isStoreInterval bool
 }
 
-func NewMetricsService(storage storage.MetricsStorage, diskW storage.DiskWriter, repository repository.Repository, isStoreInterval bool) MetricsService {
-	return &metricsService{storage, diskW, repository, isStoreInterval}
+func NewMetricsService(storage storage.MetricsStorage, saver interface{ Save() error }, repository repository.Repository, isStoreInterval bool) MetricsService {
+	return &metricsService{storage, saver, repository, isStoreInterval}
 }
 
 func (s *metricsService) Update(metricType, metricName, metricValStr string) error {
@@ -114,6 +115,13 @@ func (s *metricsService) GetJSON(requestData *models.Metrics) error {
 	}
 	return nil
 }
+
+func (s *metricsService) UpdateBatch(metrics []models.Metrics) error {
+	s.storage.SetMetricsJSON(metrics)
+	return nil
+}
+
+// repository
 
 func (s *metricsService) Ping() error {
 	err := s.repository.Ping()

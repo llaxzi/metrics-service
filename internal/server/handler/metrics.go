@@ -14,6 +14,7 @@ type MetricsHandler interface {
 	UpdateJSON(ctx *gin.Context)
 	GetJSON(ctx *gin.Context)
 	Ping(ctx *gin.Context)
+	UpdateBatch(ctx *gin.Context)
 }
 
 func NewMetricsHandler(service service.MetricsService) MetricsHandler {
@@ -149,4 +150,19 @@ func (h *metricsHandler) Ping(ctx *gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, "ok")
+}
+
+func (h *metricsHandler) UpdateBatch(ctx *gin.Context) {
+	var metrics []models.Metrics
+	err := ctx.ShouldBindBodyWithJSON(&metrics) // Использована gin обертка вместо декодера напрямую
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
+		return
+	}
+	err = h.service.UpdateBatch(metrics)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"message": "updated successfully"})
 }
