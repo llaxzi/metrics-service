@@ -16,13 +16,12 @@ type MetricsHandler interface {
 	Ping(ctx *gin.Context)
 }
 
-func NewMetricsHandler(service service.MetricsService, isStoreInterval bool) MetricsHandler {
-	return &metricsHandler{service, isStoreInterval}
+func NewMetricsHandler(service service.MetricsService) MetricsHandler {
+	return &metricsHandler{service}
 }
 
 type metricsHandler struct {
-	service         service.MetricsService
-	isStoreInterval bool
+	service service.MetricsService
 }
 
 func (h *metricsHandler) Update(ctx *gin.Context) {
@@ -45,12 +44,10 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 	}
 
 	// Сохраняем на диск при синхронном режиме
-	if !h.isStoreInterval {
-		err = h.service.SaveDisk()
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+	err = h.service.Save()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	ctx.String(http.StatusOK, "updated successfully")
@@ -104,12 +101,11 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 		return
 	}
 
-	if !h.isStoreInterval {
-		err = h.service.SaveDisk()
-		if err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
+	// Сохраняем на диск при синхронном режиме
+	err = h.service.Save()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	ctx.JSON(http.StatusOK, requestData)

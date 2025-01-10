@@ -33,6 +33,20 @@ func (m *MockRepository) EXPECT() *MockRepositoryMockRecorder {
 	return m.recorder
 }
 
+// Bootstrap mocks base method.
+func (m *MockRepository) Bootstrap() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Bootstrap")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Bootstrap indicates an expected call of Bootstrap.
+func (mr *MockRepositoryMockRecorder) Bootstrap() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bootstrap", reflect.TypeOf((*MockRepository)(nil).Bootstrap))
+}
+
 // Close mocks base method.
 func (m *MockRepository) Close() error {
 	m.ctrl.T.Helper()
@@ -45,20 +59,6 @@ func (m *MockRepository) Close() error {
 func (mr *MockRepositoryMockRecorder) Close() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close))
-}
-
-// CreateMetricsTable mocks base method.
-func (m *MockRepository) CreateMetricsTable() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateMetricsTable")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// CreateMetricsTable indicates an expected call of CreateMetricsTable.
-func (mr *MockRepositoryMockRecorder) CreateMetricsTable() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMetricsTable", reflect.TypeOf((*MockRepository)(nil).CreateMetricsTable))
 }
 
 // Ping mocks base method.
