@@ -26,10 +26,7 @@ type Retryer interface {
 
 func NewRetryer() Retryer {
 	return &retryer{retryCount: 3, delay: time.Second, increase: 2 * time.Second, retryConditionFunc: func(err error) bool {
-		if err != nil {
-			return true
-		}
-		return false
+		return err != nil
 	}}
 }
 
