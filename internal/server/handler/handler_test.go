@@ -9,8 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"html/template"
+	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/mocks"
 	"metrics-service/internal/server/models"
+	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/service"
 	"metrics-service/internal/server/storage"
 	"net/http"
@@ -53,7 +55,7 @@ func TestMetricsHandler_Update(t *testing.T) {
 		router := gin.Default()
 		metricsStorage := storage.NewMetricsStorage()
 
-		metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
+		metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
 		metricsH := NewMetricsHandler(metricsService)
 
 		router.POST("/update/:metricType/:metricName/:metricVal", metricsH.Update)
@@ -104,7 +106,7 @@ func TestMetricsHandler_Get(t *testing.T) {
 			metricsStorage := storage.NewMetricsStorage()
 			test.storageSet(metricsStorage)
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
 
 			metricsH := NewMetricsHandler(metricsService)
 
@@ -247,7 +249,7 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			router := gin.Default()
 			metricsStorage := storage.NewMetricsStorage()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
 			metricsH := NewMetricsHandler(metricsService)
 
 			router.POST("/update", metricsH.UpdateJSON)
@@ -304,7 +306,7 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
 			metricsH := NewMetricsHandler(metricsService)
 
 			router := gin.Default()
@@ -353,7 +355,12 @@ func TestMetricsHandler_Ping(t *testing.T) {
 				repo.EXPECT().Ping().Return(errors.New("server error"))
 			}
 
-			metricsService := service.NewMetricsService(nil, nil, repo, true)
+			serviceRetryer := retry.NewRetryer()
+			serviceRetryer.SetConditionFunc(func(err error) bool {
+				return errors.Is(err, apperrors.ErrPgConnExc)
+			})
+
+			metricsService := service.NewMetricsService(nil, nil, repo, true, serviceRetryer)
 			metricsH := NewMetricsHandler(metricsService)
 
 			w := httptest.NewRecorder()
@@ -393,7 +400,7 @@ func TestMetricsHandler_UpdateBatch(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			mStorage := storage.NewMetricsStorage()
-			metricsService := service.NewMetricsService(mStorage, nil, nil, true)
+			metricsService := service.NewMetricsService(mStorage, nil, nil, true, nil)
 			metricsH := NewMetricsHandler(metricsService)
 
 			router := gin.Default()
