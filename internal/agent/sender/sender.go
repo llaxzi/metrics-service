@@ -9,6 +9,7 @@ import (
 	"metrics-service/internal/server/models"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type Sender interface {
@@ -158,7 +159,7 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 
 	jsonData, err := json.Marshal(metrics)
 	if err != nil {
-		return fmt.Errorf("failed to marshal JSON: %v", err)
+		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
 	// Сжатие данных в gzip
@@ -166,25 +167,48 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 	gzipWriter := gzip.NewWriter(&buf)
 
 	if _, err = gzipWriter.Write(jsonData); err != nil {
-		return fmt.Errorf("failed to gzip data: %v", err)
+		return fmt.Errorf("failed to gzip data: %w", err)
 	}
 	if err = gzipWriter.Close(); err != nil {
-		return fmt.Errorf("failed to close gzip writer: %v", err)
+		return fmt.Errorf("failed to close gzip writer: %w", err)
 	}
 
 	url := s.baseURL + "/updates"
 
 	client := resty.New()
+
+	// Настройка retry
+	client.SetRetryCount(3)
+	client.SetRetryAfter(func(client *resty.Client, response *resty.Response) (time.Duration, error) {
+		retryCount := response.Request.Attempt
+		switch retryCount {
+		case 1:
+			return 1 * time.Second, nil
+		case 2:
+			return 3 * time.Second, nil
+		case 3:
+			return 5 * time.Second, nil
+		default:
+			return 0, nil
+		}
+	})
+	client.AddRetryCondition(func(response *resty.Response, err error) bool {
+		if response.StatusCode() == http.StatusServiceUnavailable || response.StatusCode() == http.StatusInternalServerError {
+			return true
+		}
+		return false
+	}) // retry только в случае, если сервер недоступен (maintenance или перегрузка) или внут. ошибка
+
 	client.SetHeader("Content-type", "application/json")
 	client.SetHeader("Content-Encoding", "gzip")
 
 	resp, err := client.R().SetBody(buf.Bytes()).Post(url)
 	if err != nil {
-		return fmt.Errorf("failed to send request: %v", err)
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 
 	if resp.StatusCode() != 200 {
-		return fmt.Errorf("request %v failed: %v", url, err)
+		return fmt.Errorf("request %v failed: %w", url, err)
 	}
 	return nil
 }

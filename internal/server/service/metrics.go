@@ -1,10 +1,11 @@
 package service
 
 import (
-	"errors"
 	"log"
+	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/repository"
+	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
 	"strconv"
 )
@@ -21,14 +22,17 @@ type MetricsService interface {
 
 type metricsService struct {
 	storage         storage.MetricsStorage
-	saver           interface{ Save() error }
+	saver           storage.Saver
 	repository      repository.Repository
 	isStoreInterval bool
+	retryer         retry.Retryer
 }
 
-func NewMetricsService(storage storage.MetricsStorage, saver interface{ Save() error }, repository repository.Repository, isStoreInterval bool) MetricsService {
-	return &metricsService{storage, saver, repository, isStoreInterval}
+func NewMetricsService(storage storage.MetricsStorage, saver interface{ Save() error }, repository repository.Repository, isStoreInterval bool, retryer retry.Retryer) MetricsService {
+	return &metricsService{storage, saver, repository, isStoreInterval, retryer}
 }
+
+//TODO: логирование ошибок
 
 func (s *metricsService) Update(metricType, metricName, metricValStr string) error {
 	// Обновляем значение метрики в зависимости от типа
@@ -36,19 +40,19 @@ func (s *metricsService) Update(metricType, metricName, metricValStr string) err
 	case "counter":
 		metricVal, err := strconv.ParseInt(metricValStr, 10, 64)
 		if err != nil {
-			return errors.New("wrong metric value")
+			return apperrors.ErrWrongMetricValue
 		}
 		s.storage.SetCounter(metricName, metricVal)
 
 	case "gauge":
 		metricVal, err := strconv.ParseFloat(metricValStr, 64)
 		if err != nil {
-			return errors.New("wrong metric value")
+			return apperrors.ErrWrongMetricValue
 		}
 		s.storage.SetGauge(metricName, metricVal)
 
 	default:
-		return errors.New("invalid metric type")
+		return apperrors.ErrInvalidMetricType
 	}
 
 	return nil
@@ -60,18 +64,18 @@ func (s *metricsService) Get(metricType, metricName string) (string, error) {
 	case "counter":
 		metricVal, exists := s.storage.GetCounter(metricName)
 		if !exists {
-			return "", errors.New("metric doesn't exist")
+			return "", apperrors.ErrMetricNotExist
 		}
 		return strconv.FormatInt(metricVal, 10), nil
 	case "gauge":
 		metricVal, exists := s.storage.GetGauge(metricName)
 
 		if !exists {
-			return "", errors.New("metric doesn't exist")
+			return "", apperrors.ErrMetricNotExist
 		}
 		return strconv.FormatFloat(metricVal, 'f', -1, 64), nil
 	default:
-		return "", errors.New("wrong metric type")
+		return "", apperrors.ErrInvalidMetricType
 	}
 }
 
@@ -82,18 +86,17 @@ func (s *metricsService) UpdateJSON(requestData *models.Metrics) error {
 
 		actualVal, exists := s.storage.GetCounter(requestData.ID)
 		if !exists {
-			return errors.New("server error")
+			return apperrors.ErrServer
 		}
 		*requestData.Delta = actualVal
 	case "gauge":
 		s.storage.SetGauge(requestData.ID, *requestData.Value)
 		actualVal, exists := s.storage.GetGauge(requestData.ID)
 		if !exists {
-			return errors.New("server error")
+			return apperrors.ErrServer
 		}
 		*requestData.Value = actualVal
 	}
-
 	return nil
 }
 
@@ -102,32 +105,16 @@ func (s *metricsService) GetJSON(requestData *models.Metrics) error {
 	case "counter":
 		metricVal, exists := s.storage.GetCounter(requestData.ID)
 		if !exists {
-			return errors.New("metric doesn't exist")
+			return apperrors.ErrMetricNotExist
 		}
 		requestData.Delta = &metricVal
 	case "gauge":
 		metricVal, exists := s.storage.GetGauge(requestData.ID)
 
 		if !exists {
-			return errors.New("metric doesn't exist")
+			return apperrors.ErrMetricNotExist
 		}
 		requestData.Value = &metricVal
-	}
-	return nil
-}
-
-func (s *metricsService) UpdateBatch(metrics []models.Metrics) error {
-	s.storage.SetMetricsJSON(metrics)
-	return nil
-}
-
-// repository
-
-func (s *metricsService) Ping() error {
-	err := s.repository.Ping()
-	if err != nil {
-		log.Print(err.Error())
-		return errors.New("server error")
 	}
 	return nil
 }
@@ -138,7 +125,20 @@ func (s *metricsService) Save() error {
 	}
 	err := s.saver.Save()
 	if err != nil {
-		return errors.New("server error")
+		return apperrors.ErrServer
+	}
+	return nil
+}
+
+func (s *metricsService) UpdateBatch(metrics []models.Metrics) error {
+	s.storage.SetMetricsJSON(metrics)
+	return nil
+}
+
+func (s *metricsService) Ping() error {
+	if err := s.retryer.Retry(s.repository.Ping); err != nil {
+		log.Print(err)
+		return apperrors.ErrServer
 	}
 	return nil
 }

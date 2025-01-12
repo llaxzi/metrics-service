@@ -5,8 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/storage"
+
 	"time"
 )
 
@@ -43,7 +47,13 @@ func (r *repository) Close() error {
 func (r *repository) Ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), pingTimeout*time.Second)
 	defer cancel()
-	return r.db.PingContext(ctx)
+	err := r.db.PingContext(ctx)
+	if err != nil {
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+	}
+	return err
 }
 
 // Save выполняет batch вставку в бд
@@ -79,28 +89,43 @@ func (r *repository) Save() error {
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to start tx: %w", err)
 	}
 
 	stmt, err := tx.PrepareContext(ctx, query)
 	if err != nil {
 		tx.Rollback()
-		return err
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to prepare statement: %w", err)
 	}
 
 	result, err := stmt.ExecContext(ctx, values...)
 	if err != nil {
 		tx.Rollback()
-		return err
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to execute statement: %w", err)
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
 		tx.Rollback()
-		return err
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if rowsAff != int64(len(metrics)) {
 		tx.Rollback()
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
 		return errors.New("rows affected != len(metrics)")
 	}
 
@@ -114,20 +139,26 @@ func (r *repository) Bootstrap() error {
 
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to start tx: %v", err)
+		return fmt.Errorf("failed to start tx: %w", err)
 	}
 	//Удаляем enum тип и таблицу, если существуют
 	dropTableQuery := `DROP TABLE IF EXISTS public.metrics;`
 	_, err = tx.ExecContext(ctx, dropTableQuery)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("failed to drop table metrics: %v", err)
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to drop table metrics: %w", err)
 	}
 	dropTypeQuery := `DROP TYPE IF EXISTS MType;`
 	_, err = tx.ExecContext(ctx, dropTypeQuery)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("failed to drop type MType: %v", err)
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to drop type MType: %w", err)
 	}
 
 	// Создаем enum тип
@@ -135,7 +166,10 @@ func (r *repository) Bootstrap() error {
 	_, err = tx.ExecContext(ctx, createTypeQuery)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("failed to create enum MType: %v", err)
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to create enum MType: %w", err)
 	}
 
 	// Создаем таблицу
@@ -147,7 +181,15 @@ func (r *repository) Bootstrap() error {
 	_, err = tx.ExecContext(ctx, createTableQuery)
 	if err != nil {
 		tx.Rollback()
-		return fmt.Errorf("failed to create table metrics: %v", err)
+		if r.isPgConnErr(err) {
+			return apperrors.ErrPgConnExc
+		}
+		return fmt.Errorf("failed to create table metrics: %w", err)
 	}
 	return tx.Commit()
+}
+
+func (r *repository) isPgConnErr(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgerrcode.IsConnectionException(pgErr.Code)
 }

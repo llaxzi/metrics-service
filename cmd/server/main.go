@@ -1,13 +1,17 @@
 package main
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"log"
+	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/middleware"
 	"metrics-service/internal/server/repository"
+	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/service"
 	"metrics-service/internal/server/storage"
+	"syscall"
 	"time"
 )
 
@@ -60,9 +64,15 @@ func main() {
 	}
 
 	// Подготавливаем бд
-	if err := repo.Bootstrap(); err != nil {
+	serviceRetryer := retry.NewRetryer()
+	serviceRetryer.SetConditionFunc(func(err error) bool {
+		return errors.Is(err, apperrors.ErrPgConnExc)
+	})
+
+	if err := serviceRetryer.Retry(repo.Bootstrap); err != nil {
 		log.Printf("Failed to set up sql environment")
 	}
+
 	defer func(repo repository.Repository) {
 		err := repo.Close()
 		if err != nil {
@@ -71,10 +81,7 @@ func main() {
 	}(repo)
 
 	isStoreInterval := flagStoreInterval > 0
-	var saver interface {
-		Save() error
-	}
-
+	var saver storage.Saver
 	switch {
 	case flagDatabaseDSN != "":
 		saver = repo
@@ -84,15 +91,18 @@ func main() {
 		saver = metricsStorage
 	}
 
-	defer saver.Save() // штатное сохранение
+	saveRetryer := retry.NewRetryer()
+	saveRetryer.SetConditionFunc(func(err error) bool {
+		return errors.Is(err, apperrors.ErrPgConnExc) || errors.Is(err, syscall.EBUSY)
+	})
+
 	// Сохранение данных
 	if isStoreInterval {
 		ticker := time.NewTicker(time.Duration(flagStoreInterval) * time.Second)
 		defer ticker.Stop()
 		go func() {
 			for range ticker.C {
-				err := saver.Save()
-				if err != nil {
+				if err := saveRetryer.Retry(saver.Save); err != nil {
 					log.Printf("Failed to save metrics: %v", err)
 				}
 			}
@@ -100,7 +110,7 @@ func main() {
 	}
 
 	// Создаем service'ы
-	metricsService := service.NewMetricsService(metricsStorage, saver, repo, isStoreInterval)
+	metricsService := service.NewMetricsService(metricsStorage, saver, repo, isStoreInterval, serviceRetryer)
 	htmlService := service.NewHTMLService(metricsStorage)
 	// Создаем handler's
 	metricsHandler := handler.NewMetricsHandler(metricsService)
