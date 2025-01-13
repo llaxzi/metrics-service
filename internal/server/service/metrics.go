@@ -120,11 +120,13 @@ func (s *metricsService) UpdateBatch(metrics []models.Metrics) error {
 	}
 
 	if err != nil {
+		log.Printf("Failed to batch update: %v", err)
 		return err
 	}
 	// Сохраняем на диск при синхронном режиме
 	err = s.Save()
 	if err != nil {
+		log.Printf("Failed to save updates: %v", err)
 		return err
 	}
 	return nil

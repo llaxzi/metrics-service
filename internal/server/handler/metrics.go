@@ -44,13 +44,6 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 		return
 	}
 
-	// Сохраняем на диск при синхронном режиме
-	err = h.service.Save()
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
 	ctx.String(http.StatusOK, "updated successfully")
 }
 
@@ -97,13 +90,6 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 	}
 
 	err = h.service.UpdateJSON(&requestData)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Сохраняем на диск при синхронном режиме
-	err = h.service.Save()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -164,11 +150,6 @@ func (h *metricsHandler) UpdateBatch(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	// Сохраняем на диск при синхронном режиме
-	err = h.service.Save()
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
+
 	ctx.JSON(http.StatusOK, gin.H{"message": "updated successfully"})
 }
