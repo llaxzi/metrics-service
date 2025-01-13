@@ -64,8 +64,25 @@ func (r *repository) Save(metrics []models.Metrics) error {
 	// Удаление дубликатов
 	uniqueMetrics := make(map[string]models.Metrics)
 	for _, metric := range metrics {
-		uniqueMetrics[metric.ID] = metric
+		if existingMetric, exists := uniqueMetrics[metric.ID]; exists {
+			if metric.MType == "counter" {
+				// Суммируем delta для counter
+				if metric.Delta != nil && existingMetric.Delta != nil {
+					newDelta := *existingMetric.Delta + *metric.Delta
+					existingMetric.Delta = &newDelta
+				} else if metric.Delta != nil {
+					existingMetric.Delta = metric.Delta
+				}
+			} else if metric.MType == "gauge" {
+				// Заменяем для gauge
+				existingMetric.Value = metric.Value
+			}
+			uniqueMetrics[metric.ID] = existingMetric
+		} else {
+			uniqueMetrics[metric.ID] = metric
+		}
 	}
+
 	distinctMetrics := make([]models.Metrics, 0, len(uniqueMetrics))
 	for _, metric := range uniqueMetrics {
 		distinctMetrics = append(distinctMetrics, metric)
