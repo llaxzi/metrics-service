@@ -80,7 +80,7 @@ func (r *repository) Save(metrics []models.Metrics) error {
 		}
 	}
 	// обновление существующих записей
-	query += "ON CONFLICT (metric_id,metric_type) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta, value = EXCLUDED.value;"
+	query += "ON CONFLICT (metric_id) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta, value = EXCLUDED.value;"
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
@@ -172,12 +172,10 @@ func (r *repository) Bootstrap() error {
 
 	// Создаем таблицу
 	createTableQuery := `CREATE TABLE IF NOT EXISTS public.metrics (
-		metric_id VARCHAR(100),
+		metric_id VARCHAR(100) PRIMARY KEY,
 		metric_type MType,
 		delta BIGINT,
-		value DOUBLE PRECISION,
-		PRIMARY KEY (metric_id, metric_type)
-	);`
+		value DOUBLE PRECISION);`
 	_, err = tx.ExecContext(ctx, createTableQuery)
 	if err != nil {
 		tx.Rollback()
