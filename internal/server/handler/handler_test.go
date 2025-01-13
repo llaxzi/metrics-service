@@ -55,7 +55,7 @@ func TestMetricsHandler_Update(t *testing.T) {
 		router := gin.Default()
 		metricsStorage := storage.NewMetricsStorage()
 
-		metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
+		metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
 		metricsH := NewMetricsHandler(metricsService)
 
 		router.POST("/update/:metricType/:metricName/:metricVal", metricsH.Update)
@@ -106,7 +106,7 @@ func TestMetricsHandler_Get(t *testing.T) {
 			metricsStorage := storage.NewMetricsStorage()
 			test.storageSet(metricsStorage)
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
 
 			metricsH := NewMetricsHandler(metricsService)
 
@@ -164,7 +164,7 @@ func TestHtmlHandler_Get(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			metricsStorage := storage.NewMetricsStorage()
-			metricsService := service.NewHTMLService(metricsStorage)
+			metricsService := service.NewHTMLService(metricsStorage, nil, false)
 			htmlH := NewHTMLHandler(metricsService)
 
 			test.storageSet(metricsStorage)
@@ -249,7 +249,7 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			router := gin.Default()
 			metricsStorage := storage.NewMetricsStorage()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
 			metricsH := NewMetricsHandler(metricsService)
 
 			router.POST("/update", metricsH.UpdateJSON)
@@ -306,7 +306,7 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, true, nil)
+			metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
 			metricsH := NewMetricsHandler(metricsService)
 
 			router := gin.Default()
@@ -360,7 +360,7 @@ func TestMetricsHandler_Ping(t *testing.T) {
 				return errors.Is(err, apperrors.ErrPgConnExc)
 			})
 
-			metricsService := service.NewMetricsService(nil, nil, repo, true, serviceRetryer)
+			metricsService := service.NewMetricsService(nil, nil, repo, true, true, serviceRetryer)
 			metricsH := NewMetricsHandler(metricsService)
 
 			w := httptest.NewRecorder()
@@ -400,7 +400,7 @@ func TestMetricsHandler_UpdateBatch(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			mStorage := storage.NewMetricsStorage()
-			metricsService := service.NewMetricsService(mStorage, nil, nil, true, nil)
+			metricsService := service.NewMetricsService(mStorage, nil, nil, false, true, nil)
 			metricsH := NewMetricsHandler(metricsService)
 
 			router := gin.Default()

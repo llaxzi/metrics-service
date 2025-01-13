@@ -34,7 +34,7 @@ func init() {
 	// Создаем хранилище
 	metricsStorage = storage.NewMetricsStorage()
 	// Создаем repository
-	repo, err = repository.NewRepository(flagDatabaseDSN, metricsStorage)
+	repo, err = repository.NewRepository(flagDatabaseDSN)
 	if err != nil {
 		log.Fatalf("Failed to initialize repository: %v", err)
 	}
@@ -48,7 +48,7 @@ func init() {
 func main() {
 
 	// Загружаем storage из файла, если необходимо
-	if flagRestore {
+	if flagDatabaseDSN == "" && flagRestore {
 		reader, err := storage.NewDiskReader(metricsStorage, flagFileStoragePath)
 		if err != nil {
 			log.Fatalf("Failed to restore metrics from %v: %v", flagFileStoragePath, err)
@@ -61,18 +61,18 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to close diskReader: %v", err)
 		}
+		log.Printf("Read metrics from file: %v\n", flagFileStoragePath)
 	}
 
-	// Подготавливаем бд
 	serviceRetryer := retry.NewRetryer()
 	serviceRetryer.SetConditionFunc(func(err error) bool {
 		return errors.Is(err, apperrors.ErrPgConnExc)
 	})
 
+	// Подготавливаем бд
 	if err := serviceRetryer.Retry(repo.Bootstrap); err != nil {
-		log.Printf("Failed to set up sql environment")
+		log.Printf("Failed to set up sql environment: %v", err)
 	}
-
 	defer func(repo repository.Repository) {
 		err := repo.Close()
 		if err != nil {
@@ -81,37 +81,29 @@ func main() {
 	}(repo)
 
 	isStoreInterval := flagStoreInterval > 0
-	var saver storage.Saver
-	switch {
-	case flagDatabaseDSN != "":
-		saver = repo
-	case flagFileStoragePath != "":
-		saver = diskW
-	default:
-		saver = metricsStorage
-	}
 
 	saveRetryer := retry.NewRetryer()
 	saveRetryer.SetConditionFunc(func(err error) bool {
 		return errors.Is(err, apperrors.ErrPgConnExc) || errors.Is(err, syscall.EBUSY)
 	})
 
-	// Сохранение данных
-	if isStoreInterval {
+	// Сохранение данных на диск
+	if flagDatabaseDSN == "" && isStoreInterval {
 		ticker := time.NewTicker(time.Duration(flagStoreInterval) * time.Second)
 		defer ticker.Stop()
 		go func() {
 			for range ticker.C {
-				if err := saveRetryer.Retry(saver.Save); err != nil {
-					log.Printf("Failed to save metrics: %v", err)
+				err := saveRetryer.Retry(diskW.Save)
+				if err != nil {
+					log.Printf("Failed to save metrics on disk: %v\n", err)
 				}
 			}
 		}()
 	}
 
 	// Создаем service'ы
-	metricsService := service.NewMetricsService(metricsStorage, saver, repo, isStoreInterval, serviceRetryer)
-	htmlService := service.NewHTMLService(metricsStorage)
+	metricsService := service.NewMetricsService(metricsStorage, diskW, repo, flagDatabaseDSN != "", flagDatabaseDSN == "" && !isStoreInterval, serviceRetryer)
+	htmlService := service.NewHTMLService(metricsStorage, repo, flagDatabaseDSN != "")
 	// Создаем handler's
 	metricsHandler := handler.NewMetricsHandler(metricsService)
 	htmlHandler := handler.NewHTMLHandler(htmlService)

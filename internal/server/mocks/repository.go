@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	models "metrics-service/internal/server/models"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -61,6 +62,36 @@ func (mr *MockRepositoryMockRecorder) Close() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockRepository)(nil).Close))
 }
 
+// Get mocks base method.
+func (m *MockRepository) Get(metricType, metricName string) (models.Metrics, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", metricType, metricName)
+	ret0, _ := ret[0].(models.Metrics)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MockRepositoryMockRecorder) Get(metricType, metricName interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRepository)(nil).Get), metricType, metricName)
+}
+
+// GetSlice mocks base method.
+func (m *MockRepository) GetSlice() ([][]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSlice")
+	ret0, _ := ret[0].([][]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSlice indicates an expected call of GetSlice.
+func (mr *MockRepositoryMockRecorder) GetSlice() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSlice", reflect.TypeOf((*MockRepository)(nil).GetSlice))
+}
+
 // Ping mocks base method.
 func (m *MockRepository) Ping() error {
 	m.ctrl.T.Helper()
@@ -76,15 +107,15 @@ func (mr *MockRepositoryMockRecorder) Ping() *gomock.Call {
 }
 
 // Save mocks base method.
-func (m *MockRepository) Save() error {
+func (m *MockRepository) Save(metrics []models.Metrics) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Save")
+	ret := m.ctrl.Call(m, "Save", metrics)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Save indicates an expected call of Save.
-func (mr *MockRepositoryMockRecorder) Save() *gomock.Call {
+func (mr *MockRepositoryMockRecorder) Save(metrics interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRepository)(nil).Save))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Save", reflect.TypeOf((*MockRepository)(nil).Save), metrics)
 }

@@ -1,21 +1,36 @@
 package service
 
-import "metrics-service/internal/server/storage"
+import (
+	apperrors "metrics-service/internal/server/errors"
+	"metrics-service/internal/server/repository"
+	"metrics-service/internal/server/storage"
+)
 
 type HTMLService interface {
-	GenerateHTML() string
+	GenerateHTML() (string, error)
 }
 
 type htmlService struct {
-	storage storage.MetricsStorage
+	storage       storage.MetricsStorage
+	repository    repository.Repository
+	useRepository bool
 }
 
-func NewHTMLService(storage storage.MetricsStorage) HTMLService {
-	return &htmlService{storage}
+func NewHTMLService(storage storage.MetricsStorage, repository repository.Repository, useRepository bool) HTMLService {
+	return &htmlService{storage, repository, useRepository}
 }
 
-func (s *htmlService) GenerateHTML() string {
-	metrics := s.storage.GetMetrics()
+func (s *htmlService) GenerateHTML() (string, error) {
+	var metrics [][]string
+	if s.useRepository {
+		data, err := s.repository.GetSlice()
+		if err != nil {
+			return "", apperrors.ErrServer
+		}
+		metrics = data
+	} else {
+		metrics = s.storage.GetMetrics()
+	}
 
 	// Формируем html
 
@@ -28,5 +43,5 @@ func (s *htmlService) GenerateHTML() string {
 		}
 	}
 	metricsHTML += "</div>"
-	return metricsHTML
+	return metricsHTML, nil
 }

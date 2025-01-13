@@ -3,6 +3,7 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/service"
+	"net/http"
 )
 
 type HTMLHandler interface {
@@ -18,6 +19,9 @@ type htmlHandler struct {
 }
 
 func (h *htmlHandler) Get(ctx *gin.Context) {
-	metricsHTML := h.service.GenerateHTML()
+	metricsHTML, err := h.service.GenerateHTML()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	}
 	ctx.Data(200, "text/html", []byte(metricsHTML))
 }

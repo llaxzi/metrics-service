@@ -164,5 +164,11 @@ func (h *metricsHandler) UpdateBatch(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	// Сохраняем на диск при синхронном режиме
+	err = h.service.Save()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	ctx.JSON(http.StatusOK, gin.H{"message": "updated successfully"})
 }
