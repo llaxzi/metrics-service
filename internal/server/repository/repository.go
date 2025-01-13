@@ -62,6 +62,8 @@ func (r *repository) Save(metrics []models.Metrics) error {
 		Для большего количества метрик (возможно ли такое даже в крупном проекте!? - сомневаюсь) нужно разбивать на чанки в сервисе.
 	*/
 
+	fmt.Println(metrics)
+
 	//metrics := r.mStorage.GetMetricsJSON()
 	if len(metrics) < 1 {
 		return nil
