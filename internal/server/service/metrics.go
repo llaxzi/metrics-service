@@ -76,6 +76,9 @@ func (s *metricsService) UpdateJSON(requestData *models.Metrics) error {
 	} else {
 		err = s.updateJSONStorage(requestData)
 	}
+	if err != nil {
+		return err
+	}
 	// Сохраняем на диск при синхронном режиме
 	err = s.Save()
 	if err != nil {
@@ -182,7 +185,14 @@ func (s *metricsService) updateRepo(metricType, metricName, metricValStr string)
 		value = &metricVal
 
 	}
-	metrics := []models.Metrics{{metricName, metricType, delta, value}}
+	metrics := []models.Metrics{
+		{
+			ID:    metricName,
+			MType: metricType,
+			Delta: delta,
+			Value: value,
+		},
+	}
 	err := s.retryer.Retry(func() error {
 		return s.repository.Save(metrics)
 	})
