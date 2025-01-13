@@ -62,18 +62,25 @@ func (r *repository) Save(metrics []models.Metrics) error {
 		Для большего количества метрик (возможно ли такое даже в крупном проекте!? - сомневаюсь) нужно разбивать на чанки в сервисе.
 	*/
 
-	fmt.Println(metrics)
-
-	//metrics := r.mStorage.GetMetricsJSON()
 	if len(metrics) < 1 {
 		return nil
+	}
+
+	// Удаление дубликатов тк тесты отправляют в одном батче одинаковые метрики
+	uniqueMetrics := make(map[string]models.Metrics)
+	for _, metric := range metrics {
+		uniqueMetrics[metric.ID] = metric
+	}
+	distinctMetrics := make([]models.Metrics, 0, len(uniqueMetrics))
+	for _, metric := range uniqueMetrics {
+		distinctMetrics = append(distinctMetrics, metric)
 	}
 
 	// Формируем UPSERT sql запрос
 	query := "INSERT INTO public.metrics(metric_id,metric_type,delta,value) VALUES "
 	values := make([]interface{}, 0, len(metrics)*4)
 	paramIdx := 1
-	for i, metric := range metrics {
+	for i, metric := range distinctMetrics {
 		values = append(values, metric.ID, metric.MType, metric.Delta, metric.Value)
 		query += fmt.Sprintf("($%d,$%d,$%d,$%d)", paramIdx, paramIdx+1, paramIdx+2, paramIdx+3)
 		paramIdx += 4
