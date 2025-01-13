@@ -56,17 +56,12 @@ func (r *repository) Ping() error {
 
 // Save выполняет batch вставку в бд
 func (r *repository) Save(metrics []models.Metrics) error {
-	/*
-		Warning: лимит параметров запроса в postgres = 65.535 параметров.
-		Метод может обновить до 65535 / 4 = 16383 метрик.
-		Для большего количества метрик (возможно ли такое даже в крупном проекте!? - сомневаюсь) нужно разбивать на чанки в сервисе.
-	*/
-
 	if len(metrics) < 1 {
 		return nil
 	}
+	fmt.Println(metrics)
 
-	// Удаление дубликатов тк тесты отправляют в одном батче одинаковые метрики
+	// Удаление дубликатов
 	uniqueMetrics := make(map[string]models.Metrics)
 	for _, metric := range metrics {
 		uniqueMetrics[metric.ID] = metric
@@ -77,19 +72,18 @@ func (r *repository) Save(metrics []models.Metrics) error {
 	}
 
 	// Формируем UPSERT sql запрос
-	query := "INSERT INTO public.metrics(metric_id,metric_type,delta,value) VALUES "
-	values := make([]interface{}, 0, len(metrics)*4)
+	query := "INSERT INTO public.metrics(metric_id, metric_type, delta, value) VALUES "
+	values := make([]interface{}, 0, len(distinctMetrics)*4)
 	paramIdx := 1
 	for i, metric := range distinctMetrics {
 		values = append(values, metric.ID, metric.MType, metric.Delta, metric.Value)
-		query += fmt.Sprintf("($%d,$%d,$%d,$%d)", paramIdx, paramIdx+1, paramIdx+2, paramIdx+3)
+		query += fmt.Sprintf("($%d, $%d, $%d, $%d)", paramIdx, paramIdx+1, paramIdx+2, paramIdx+3)
 		paramIdx += 4
-		if i != len(metrics)-1 {
-			query += ","
+		if i != len(distinctMetrics)-1 {
+			query += ", "
 		}
 	}
-	// обновление существующих записей
-	query += "ON CONFLICT (metric_id) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta, value = EXCLUDED.value;"
+	query += " ON CONFLICT (metric_id) DO UPDATE SET delta = metrics.delta + EXCLUDED.delta, value = EXCLUDED.value;"
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
@@ -128,7 +122,7 @@ func (r *repository) Save(metrics []models.Metrics) error {
 		}
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
-	if rowsAff != int64(len(metrics)) {
+	if rowsAff != int64(len(distinctMetrics)) {
 		tx.Rollback()
 		if r.isPgConnErr(err) {
 			return apperrors.ErrPgConnExc
