@@ -157,7 +157,13 @@ func (s *metricsService) updateJSONRepo(requestData *models.Metrics) error {
 	return nil
 }
 func (s *metricsService) getJSONRepo(requestData *models.Metrics) error {
-	data, err := s.repository.Get(requestData.MType, requestData.ID)
+	var data models.Metrics
+	var err error
+
+	err = s.retryer.Retry(func() error {
+		data, err = s.repository.Get(requestData.MType, requestData.ID)
+		return err
+	})
 	if err != nil {
 		return err
 	}
@@ -202,7 +208,12 @@ func (s *metricsService) updateRepo(metricType, metricName, metricValStr string)
 	return nil
 }
 func (s *metricsService) getRepo(metricType, metricName string) (string, error) {
-	data, err := s.repository.Get(metricType, metricName)
+	var data models.Metrics
+	var err error
+	err = s.retryer.Retry(func() error {
+		data, err = s.repository.Get(metricType, metricName)
+		return err
+	})
 	if err != nil {
 		return "", err
 	}
