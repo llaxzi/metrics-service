@@ -54,7 +54,7 @@ func (r *repository) Ping() error {
 	return err
 }
 
-// Save выполняет batch вставку в бд
+// SaveAll выполняет batch вставку в бд одним sql запросом
 func (r *repository) SaveAll(metrics []models.Metrics) error {
 	if len(metrics) < 1 {
 		return nil
@@ -122,6 +122,7 @@ func (r *repository) SaveAll(metrics []models.Metrics) error {
 	return tx.Commit()
 }
 
+// Save выполняет batch вставку в бд
 func (r *repository) Save(metrics []models.Metrics) error {
 	if len(metrics) < 1 {
 		return nil
