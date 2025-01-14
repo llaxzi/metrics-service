@@ -33,7 +33,7 @@ func NewMetricsService(storage storage.MetricsStorage, saver interface{ Save() e
 	return &metricsService{storage, saver, repository, useRepository, isStoreInterval, retryer}
 }
 
-//TODO: логирование ошибок
+//TODO: логирование ошибок через логгер
 
 func (s *metricsService) Update(metricType, metricName, metricValStr string) error {
 	var err error
@@ -139,7 +139,7 @@ func (s *metricsService) UpdateBatch(metrics []models.Metrics) error {
 
 func (s *metricsService) Ping() error {
 	if err := s.retryer.Retry(s.repository.Ping); err != nil {
-		log.Print(err)
+		log.Printf("Failed to ping: %v", err)
 		return apperrors.ErrServer
 	}
 	return nil
@@ -165,7 +165,7 @@ func (s *metricsService) getJSONRepo(requestData *models.Metrics) error {
 		return err
 	})
 	if err != nil {
-		return err
+		return apperrors.ErrServer
 	}
 	requestData.Delta = data.Delta
 	requestData.Value = data.Value
@@ -215,7 +215,7 @@ func (s *metricsService) getRepo(metricType, metricName string) (string, error) 
 		return err
 	})
 	if err != nil {
-		return "", err
+		return "", apperrors.ErrServer
 	}
 	switch metricType {
 	case "counter":
