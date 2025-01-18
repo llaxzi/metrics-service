@@ -21,6 +21,7 @@ type MetricsStorage interface {
 	GetMetrics() [][]string
 	GetMetricsJSON() []models.Metrics
 	SetMetricsJSON(metrics []models.Metrics)
+	Save() error
 }
 
 func NewMetricsStorage() MetricsStorage {
@@ -108,4 +109,8 @@ func (m *metricsStorage) SetMetricsJSON(metrics []models.Metrics) {
 			continue
 		}
 	}
+}
+
+func (m *metricsStorage) Save() error {
+	return nil
 }

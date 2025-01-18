@@ -2,6 +2,7 @@ package agent
 
 import (
 	"fmt"
+	"log"
 	"metrics-service/internal/agent/collector"
 	sender2 "metrics-service/internal/agent/sender"
 	"sync"
@@ -45,9 +46,9 @@ func (a *agent) Work() {
 		case <-reportTicker.C:
 			a.mu.Lock()
 
-			err := a.sender.SendJSON(a.metrics)
+			err := a.sender.SendBatch(a.metrics)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 
 			} else {
 				fmt.Println("Send metrics")

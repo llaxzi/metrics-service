@@ -13,6 +13,8 @@ var flagStoreInterval int
 var flagFileStoragePath string
 var flagRestore bool
 
+var flagDatabaseDSN string
+
 func parseFlags() {
 	flag.StringVar(&flagRunAddr, "a", "localhost:8080", "endpoint address")
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
@@ -20,6 +22,8 @@ func parseFlags() {
 	flag.IntVar(&flagStoreInterval, "i", 300, "metrics store interval")
 	flag.StringVar(&flagFileStoragePath, "f", "metrics.json", "metrics store path")
 	flag.BoolVar(&flagRestore, "r", true, "load metrics bool")
+
+	flag.StringVar(&flagDatabaseDSN, "d", "", "database DSN")
 
 	flag.Parse()
 
@@ -43,6 +47,9 @@ func parseFlags() {
 		if err == nil {
 			flagRestore = restore
 		}
+	}
+	if envDatabaseDSN := os.Getenv("DATABASE_DSN"); envDatabaseDSN != "" {
+		flagDatabaseDSN = envDatabaseDSN
 	}
 
 }

@@ -44,14 +44,14 @@ func TestSender_Send(t *testing.T) {
 
 				// Проверяем URL
 				pathParts := strings.Split(r.URL.Path, "/")
-				if len(pathParts) != 4 {
+				if len(pathParts) != 5 {
 					t.Errorf("Invalid URL path format: %s", r.URL.Path)
 				}
 
 				// Базово проверяем метрики
 
-				metricType := pathParts[1]
-				metricName := pathParts[2]
+				metricType := pathParts[2]
+				metricName := pathParts[3]
 
 				if metricName == "PollCount" {
 					assert.Equal(t, "counter", metricType)

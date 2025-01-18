@@ -14,7 +14,7 @@ func main() {
 	// Создаем интерфейсы
 	metricsCollector := collector.NewMetricsCollector()
 
-	baseURL := "http://" + serverHost + "/update"
+	baseURL := "http://" + serverHost
 	metricsSender := sender.NewSender(baseURL)
 
 	// Создаем агент
