@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"metrics-service/internal/server/models"
-	"metrics-service/internal/server/service"
+	"metrics-service/internal/server/retry"
+	"metrics-service/internal/server/storage"
 	"net/http"
 )
 
@@ -17,12 +18,14 @@ type MetricsHandler interface {
 	UpdateBatch(ctx *gin.Context)
 }
 
-func NewMetricsHandler(service service.MetricsService) MetricsHandler {
-	return &metricsHandler{service}
+func NewMetricsHandler(storage storage.Storage, retryer retry.Retryer, isSync bool) MetricsHandler {
+	return &metricsHandler{storage, retryer, isSync}
 }
 
 type metricsHandler struct {
-	service service.MetricsService
+	storage storage.Storage
+	retryer retry.Retryer
+	isSync  bool
 }
 
 func (h *metricsHandler) Update(ctx *gin.Context) {
@@ -38,10 +41,21 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 	}
 
 	// Обновляем значение метрики
-	err := h.service.Update(metricType, metricName, metricValStr)
+	err := h.retryer.Retry(func() error {
+		return h.storage.Update(ctx, metricType, metricName, metricValStr)
+	})
+
 	if err != nil {
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
+	}
+
+	// Сохраняем на диск при синхронном режиме
+	if h.isSync {
+		err = h.storage.Save()
+		if err != nil {
+			ctx.String(http.StatusInternalServerError, err.Error())
+		}
 	}
 
 	ctx.String(http.StatusOK, "updated successfully")
@@ -52,11 +66,17 @@ func (h *metricsHandler) Get(ctx *gin.Context) {
 	metricName := ctx.Param("metricName")
 	metricType := ctx.Param("metricType")
 
-	metricVal, err := h.service.Get(metricType, metricName)
+	var metricVal string
+	err := h.retryer.Retry(func() error {
+		var err error
+		metricVal, err = h.storage.Get(ctx, metricType, metricName)
+		return err
+	})
 	if err != nil {
 		ctx.String(http.StatusNotFound, err.Error())
 		return
 	}
+
 	ctx.String(http.StatusOK, metricVal)
 
 }
@@ -89,10 +109,21 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 		return
 	}
 
-	err = h.service.UpdateJSON(&requestData)
+	err = h.retryer.Retry(func() error {
+		return h.storage.UpdateJSON(ctx, &requestData)
+	})
+
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Сохраняем на диск при синхронном режиме
+	if h.isSync {
+		err = h.storage.Save()
+		if err != nil {
+			ctx.String(http.StatusInternalServerError, err.Error())
+		}
 	}
 
 	ctx.JSON(http.StatusOK, requestData)
@@ -119,18 +150,22 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 		return
 	}
 
-	err = h.service.GetJSON(&requestData)
+	err = h.retryer.Retry(func() error {
+		return h.storage.GetJSON(ctx, &requestData)
+	})
+
 	if err != nil {
 		ctx.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
+
 	ctx.JSON(http.StatusOK, requestData)
 }
 
-// repository
-
 func (h *metricsHandler) Ping(ctx *gin.Context) {
-	err := h.service.Ping()
+	err := h.retryer.Retry(func() error {
+		return h.storage.Ping(ctx)
+	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -140,15 +175,27 @@ func (h *metricsHandler) Ping(ctx *gin.Context) {
 
 func (h *metricsHandler) UpdateBatch(ctx *gin.Context) {
 	var metrics []models.Metrics
-	err := ctx.ShouldBindBodyWithJSON(&metrics) // Использована gin обертка вместо декодера напрямую
+	dec := json.NewDecoder(ctx.Request.Body)
+	err := dec.Decode(&metrics)
+
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 		return
 	}
-	err = h.service.UpdateBatch(metrics)
+	err = h.retryer.Retry(func() error {
+		return h.storage.UpdateBatch(ctx, metrics)
+	})
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Сохраняем на диск при синхронном режиме
+	if h.isSync {
+		err = h.storage.Save()
+		if err != nil {
+			ctx.String(http.StatusInternalServerError, err.Error())
+		}
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"message": "updated successfully"})

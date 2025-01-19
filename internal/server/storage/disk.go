@@ -7,51 +7,47 @@ import (
 )
 
 type DiskWriter interface {
-	Save() error
+	Save(metrics []models.Metrics) error
 }
 
 type diskWriter struct {
-	m        MetricsStorage
 	filePath string
 	encoder  *json.Encoder
 }
 
-func NewDiskWriter(metricsStorage MetricsStorage, filePath string) (DiskWriter, error) {
-	return &diskWriter{m: metricsStorage, filePath: filePath}, nil
+func NewDiskWriter(filePath string) (DiskWriter, error) {
+	return &diskWriter{filePath: filePath}, nil
 }
 
-func (w *diskWriter) Save() error {
+func (w *diskWriter) Save(metrics []models.Metrics) error {
 	file, err := os.OpenFile(w.filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
 	if err != nil {
 		return err
 	}
 	w.encoder = json.NewEncoder(file)
 	defer file.Close()
-
-	metrics := w.m.GetMetricsJSON()
 	return w.encoder.Encode(&metrics)
 }
 
 type DiskReader interface {
-	Load() error
+	Load(m *metricsStorage) error
 	Close() error
 }
 
 type diskReader struct {
-	m       MetricsStorage
 	file    *os.File
 	decoder *json.Decoder
 }
 
-func NewDiskReader(metricsStorage MetricsStorage, filePath string) (DiskReader, error) {
+func NewDiskReader(filePath string) (DiskReader, error) {
 	file, err := os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
 	}
-	return &diskReader{metricsStorage, file, json.NewDecoder(file)}, nil
+	return &diskReader{file, json.NewDecoder(file)}, nil
 }
 
-func (r *diskReader) Load() error {
+func (r *diskReader) Load(m *metricsStorage) error {
 	var metrics []models.Metrics
 
 	if err := r.decoder.Decode(&metrics); err != nil {
@@ -60,7 +56,7 @@ func (r *diskReader) Load() error {
 		}
 		return err
 	}
-	r.m.SetMetricsJSON(metrics)
+	m.setMetricsJSON(metrics)
 	return nil
 }
 

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
@@ -9,11 +10,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"html/template"
-	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/mocks"
 	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/retry"
-	"metrics-service/internal/server/service"
 	"metrics-service/internal/server/storage"
 	"net/http"
 	"net/http/httptest"
@@ -53,10 +52,12 @@ func TestMetricsHandler_Update(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		router := gin.Default()
-		metricsStorage := storage.NewMetricsStorage()
 
-		metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
-		metricsH := NewMetricsHandler(metricsService)
+		memoryStorage, _ := storage.NewStorage("", "", false, 300)
+		retryer := retry.NewRetryer()
+		retryer.SetCount(1)
+
+		metricsH := NewMetricsHandler(memoryStorage, retryer, false)
 
 		router.POST("/update/:metricType/:metricName/:metricVal", metricsH.Update)
 
@@ -78,21 +79,21 @@ func TestMetricsHandler_Get(t *testing.T) {
 		name       string
 		request    string
 		want       want
-		storageSet func(s storage.MetricsStorage)
+		storageSet func(s storage.Storage)
 	}{
-		{"OK counter", "/value/counter/someMetric", want{http.StatusOK, "text/plain", "5"}, func(s storage.MetricsStorage) {
-			s.SetCounter("someMetric", 5)
+		{"OK counter", "/value/counter/someMetric", want{http.StatusOK, "text/plain", "5"}, func(s storage.Storage) {
+			s.Update(context.Background(), "counter", "someMetric", "5")
 		}},
-		{"Not found UR counterL", "/value/counter/someMetric/metric", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.MetricsStorage) {
+		{"Not found UR counterL", "/value/counter/someMetric/metric", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.Storage) {
 		}},
-		{"Not found metric counter", "/value/counter/someMetric", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.MetricsStorage) {
+		{"Not found metric counter", "/value/counter/someMetric", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.Storage) {
 		}},
-		{"OK gauge", "/value/gauge/someMetric", want{http.StatusOK, "text/plain", "1.343"}, func(s storage.MetricsStorage) {
-			s.SetGauge("someMetric", 1.343)
+		{"OK gauge", "/value/gauge/someMetric", want{http.StatusOK, "text/plain", "5.2"}, func(s storage.Storage) {
+			s.Update(context.Background(), "gauge", "someMetric", "5.2")
 		}},
-		{"Not found URL gauge", "/value/gauge/someMetric/metric", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.MetricsStorage) {
+		{"Not found URL gauge", "/value/gauge/someMetric/metric", want{http.StatusNotFound, "text/plain", "404 page not found"}, func(s storage.Storage) {
 		}},
-		{"Not found metric gauge", "/value/gauge/someMetric", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.MetricsStorage) {
+		{"Not found metric gauge", "/value/gauge/someMetric", want{http.StatusNotFound, "text/plain", "metric doesn't exist"}, func(s storage.Storage) {
 		}},
 	}
 
@@ -103,12 +104,12 @@ func TestMetricsHandler_Get(t *testing.T) {
 
 			w := httptest.NewRecorder()
 
-			metricsStorage := storage.NewMetricsStorage()
-			test.storageSet(metricsStorage)
+			memoryStorage, _ := storage.NewStorage("", "", false, 300)
+			retryer := retry.NewRetryer()
+			retryer.SetCount(1)
+			test.storageSet(memoryStorage)
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
-
-			metricsH := NewMetricsHandler(metricsService)
+			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
 
 			router := gin.Default()
 
@@ -135,7 +136,7 @@ func TestHtmlHandler_Get(t *testing.T) {
 		name       string
 		request    string
 		want       want
-		storageSet func(s storage.MetricsStorage)
+		storageSet func(s storage.Storage)
 	}{
 		{"OK", "/", want{http.StatusOK, "text/html", `<!DOCTYPE html>
 <html lang="en">
@@ -154,20 +155,21 @@ func TestHtmlHandler_Get(t *testing.T) {
     
 </div>
 </body>
-</html>`}, func(s storage.MetricsStorage) {
-			s.SetCounter("counter", 5)
-			s.SetGauge("gauge", 1.343)
+</html>`}, func(s storage.Storage) {
+			s.Update(context.Background(), "counter", "someMetric", "5")
+			s.Update(context.Background(), "gauge", "someMetric", "5.2")
 		}},
 	}
 
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
 
-			metricsStorage := storage.NewMetricsStorage()
-			metricsService := service.NewHTMLService(metricsStorage, nil, false)
-			htmlH := NewHTMLHandler(metricsService)
+			memoryStorage, _ := storage.NewStorage("", "", false, 300)
+			retryer := retry.NewRetryer()
+			retryer.SetCount(1)
+			test.storageSet(memoryStorage)
 
-			test.storageSet(metricsStorage)
+			htmlH := NewHTMLHandler(memoryStorage, retryer)
 
 			// Используем router для проверки html ответа
 			r := gin.Default()
@@ -247,10 +249,12 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 
 			w := httptest.NewRecorder()
 			router := gin.Default()
-			metricsStorage := storage.NewMetricsStorage()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
-			metricsH := NewMetricsHandler(metricsService)
+			memoryStorage, _ := storage.NewStorage("", "", false, 300)
+			retryer := retry.NewRetryer()
+			retryer.SetCount(1)
+
+			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
 
 			router.POST("/update", metricsH.UpdateJSON)
 
@@ -271,46 +275,47 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 		name    string
 		request models.Metrics
 		want    want
-		setup   func(storage.MetricsStorage)
+		setup   func(s storage.Storage)
 	}{
 		{
 			"Existing Counter",
 			models.Metrics{ID: "someCounter", MType: "counter"},
-			want{http.StatusOK, "application/json; charset=utf-8", models.Metrics{ID: "someCounter", MType: "counter", Delta: int64Ptr(10)}},
-			func(s storage.MetricsStorage) { s.SetCounter("someCounter", 10) },
+			want{http.StatusOK, "application/json; charset=utf-8", models.Metrics{ID: "someCounter", MType: "counter", Delta: int64Ptr(5)}},
+			func(s storage.Storage) { s.Update(context.Background(), "counter", "someCounter", "5") },
 		},
 		{
 			"Existing Gauge",
 			models.Metrics{ID: "someGauge", MType: "gauge"},
-			want{http.StatusOK, "application/json; charset=utf-8", models.Metrics{ID: "someGauge", MType: "gauge", Value: float64Ptr(15.5)}},
-			func(s storage.MetricsStorage) { s.SetGauge("someGauge", 15.5) },
+			want{http.StatusOK, "application/json; charset=utf-8", models.Metrics{ID: "someGauge", MType: "gauge", Value: float64Ptr(5.2)}},
+			func(s storage.Storage) { s.Update(context.Background(), "gauge", "someGauge", "5.2") },
 		},
 		{"Not existing Counter", models.Metrics{ID: "someCounter", MType: "counter"},
 			want{http.StatusNotFound, "application/json; charset=utf-8", gin.H{"error": "metric doesn't exist"}},
-			func(s storage.MetricsStorage) {},
+			func(s storage.Storage) {},
 		},
 		{"Not existing Gauge", models.Metrics{ID: "someGauge", MType: "gauge"},
 			want{http.StatusNotFound, "application/json; charset=utf-8", gin.H{"error": "metric doesn't exist"}},
-			func(s storage.MetricsStorage) {},
+			func(s storage.Storage) {},
 		},
 	}
 
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
-			metricsStorage := storage.NewMetricsStorage()
-			test.setup(metricsStorage)
+			memoryStorage, _ := storage.NewStorage("", "", false, 300)
+			retryer := retry.NewRetryer()
+			retryer.SetCount(1)
+			test.setup(memoryStorage)
+
+			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
 
 			jsonData, _ := json.Marshal(test.request)
-			request := httptest.NewRequest(http.MethodPost, "/value", bytes.NewReader(jsonData))
+			request := httptest.NewRequest(http.MethodPost, "/value/", bytes.NewReader(jsonData))
 			request.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
 
-			metricsService := service.NewMetricsService(metricsStorage, nil, nil, false, true, nil)
-			metricsH := NewMetricsHandler(metricsService)
-
 			router := gin.Default()
-			router.POST("/value", metricsH.GetJSON)
+			router.POST("/value/", metricsH.GetJSON)
 
 			router.ServeHTTP(w, request)
 			assert.Equal(t, test.want.statusCode, w.Code)
@@ -344,24 +349,21 @@ func TestMetricsHandler_Ping(t *testing.T) {
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
 
-			// Мокаем репозиторий
+			// Мокаем storage
 			ctrl := gomock.NewController(t)
-			repo := mocks.NewMockRepository(ctrl)
+			storage := mocks.NewMockStorage(ctrl)
 
 			// Настраиваем поведение мока
 			if test.want == http.StatusOK {
-				repo.EXPECT().Ping().Return(nil)
+				storage.EXPECT().Ping(gomock.Any()).Return(nil)
 			} else {
-				repo.EXPECT().Ping().Return(errors.New("server error"))
+				storage.EXPECT().Ping(gomock.Any()).Return(errors.New("server error"))
 			}
 
-			serviceRetryer := retry.NewRetryer()
-			serviceRetryer.SetConditionFunc(func(err error) bool {
-				return errors.Is(err, apperrors.ErrPgConnExc)
-			})
+			retryer := retry.NewRetryer()
+			retryer.SetCount(1)
 
-			metricsService := service.NewMetricsService(nil, nil, repo, true, true, serviceRetryer)
-			metricsH := NewMetricsHandler(metricsService)
+			metricsH := NewMetricsHandler(storage, retryer, false)
 
 			w := httptest.NewRecorder()
 			request, _ := http.NewRequest(http.MethodGet, "/ping", nil)
@@ -385,7 +387,7 @@ func TestMetricsHandler_UpdateBatch(t *testing.T) {
 	}{
 		{name: "OK gauge", want: http.StatusOK, body: []models.Metrics{{ID: "Metric1", MType: "gauge", Value: float64Ptr(21.2)}}},
 		{name: "OK counter", want: http.StatusOK, body: []models.Metrics{{ID: "Metric2", MType: "counter", Delta: int64Ptr(12)}}},
-		{name: "Invalid JSON", want: http.StatusOK, body: []models.Metrics{{ID: "Metric3", Delta: int64Ptr(13)}}},
+		{name: "Invalid JSON", want: http.StatusInternalServerError, body: []models.Metrics{{ID: "Metric3", Delta: int64Ptr(13)}}},
 	}
 
 	for _, test := range testTable {
@@ -399,9 +401,12 @@ func TestMetricsHandler_UpdateBatch(t *testing.T) {
 			request.Header.Set("Content-Type", "application/json")
 
 			w := httptest.NewRecorder()
-			mStorage := storage.NewMetricsStorage()
-			metricsService := service.NewMetricsService(mStorage, nil, nil, false, true, nil)
-			metricsH := NewMetricsHandler(metricsService)
+
+			memoryStorage, _ := storage.NewStorage("", "", false, 300)
+			retryer := retry.NewRetryer()
+			retryer.SetCount(1)
+
+			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
 
 			router := gin.Default()
 			router.POST("/updates", metricsH.UpdateBatch)
