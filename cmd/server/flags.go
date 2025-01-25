@@ -15,6 +15,8 @@ var flagRestore bool
 
 var flagDatabaseDSN string
 
+var flagHashKey string
+
 func parseFlags() {
 	flag.StringVar(&flagRunAddr, "a", "localhost:8080", "endpoint address")
 	flag.StringVar(&flagLogLevel, "l", "info", "log level")
@@ -24,6 +26,8 @@ func parseFlags() {
 	flag.BoolVar(&flagRestore, "r", true, "load metrics bool")
 
 	flag.StringVar(&flagDatabaseDSN, "d", "", "database DSN")
+
+	flag.StringVar(&flagHashKey, "k", "", "hash key")
 
 	flag.Parse()
 
@@ -51,5 +55,7 @@ func parseFlags() {
 	if envDatabaseDSN := os.Getenv("DATABASE_DSN"); envDatabaseDSN != "" {
 		flagDatabaseDSN = envDatabaseDSN
 	}
-
+	if envHashKey := os.Getenv("KEY"); envHashKey != "" {
+		flagHashKey = envHashKey
+	}
 }

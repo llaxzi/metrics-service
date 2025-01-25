@@ -15,7 +15,7 @@ func main() {
 	metricsCollector := collector.NewMetricsCollector()
 
 	baseURL := "http://" + serverHost
-	metricsSender := sender.NewSender(baseURL)
+	metricsSender := sender.NewSender(baseURL, []byte(flagHashKey))
 
 	// Создаем агент
 	a := agent.NewAgent(pollInterval, reportInterval, metricsCollector, metricsSender)

@@ -9,6 +9,8 @@ var (
 	ErrServer            = errors.New("server error")
 	ErrPgConnExc         = errors.New("pg connection Exception")
 	ErrPingMemory        = errors.New("trying to ping memory storage")
+	ErrHashHeaderMissing = errors.New("HashSHA256 header is missing")
+	ErrHashHeaderInvalid = errors.New("invalid hash")
 )
 
 func IsAppError(err error) bool {

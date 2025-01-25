@@ -20,7 +20,7 @@ func main() {
 	parseFlags()
 
 	// Создаем middleware (логгер, gzip)
-	mid := middleware.NewMiddleware()
+	mid := middleware.NewMiddleware([]byte(flagHashKey))
 	err := mid.InitializeZap(flagLogLevel)
 	if err != nil {
 		log.Fatalf("Failed to initialize middleware: %v", err)

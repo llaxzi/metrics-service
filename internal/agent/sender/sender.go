@@ -3,6 +3,9 @@ package sender
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/go-resty/resty/v2"
@@ -18,12 +21,35 @@ type Sender interface {
 }
 
 type sender struct {
-	client  *http.Client
+	client  *resty.Client
 	baseURL string
+	hashKey []byte
 }
 
-func NewSender(baseURL string) Sender {
-	return &sender{&http.Client{}, baseURL}
+func NewSender(baseURL string, hashKey []byte) Sender {
+	client := resty.New()
+	// Настройка retry
+	client.SetRetryCount(3)
+	client.SetRetryAfter(func(client *resty.Client, response *resty.Response) (time.Duration, error) {
+		retryCount := response.Request.Attempt
+		switch retryCount {
+		case 1:
+			return 1 * time.Second, nil
+		case 2:
+			return 3 * time.Second, nil
+		case 3:
+			return 5 * time.Second, nil
+		default:
+			return 0, nil
+		}
+	})
+	client.AddRetryCondition(func(response *resty.Response, err error) bool {
+		if response.StatusCode() == http.StatusServiceUnavailable || response.StatusCode() == http.StatusInternalServerError {
+			return true
+		}
+		return false
+	}) // retry только в случае, если сервер недоступен (maintenance или перегрузка) или внут. ошибка
+	return &sender{client, baseURL, hashKey}
 }
 
 func (s *sender) Send(metricsMap map[string]interface{}) error {
@@ -162,6 +188,15 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
+	// Хеш в заголовке
+	if len(s.hashKey) > 0 {
+		hash, err := s.generateHash(jsonData)
+		if err != nil {
+			return fmt.Errorf("failed to generate hash: %w", err)
+		}
+		s.client.SetHeader("HashSHA256", hash)
+	}
+
 	// Сжатие данных в gzip
 	var buf bytes.Buffer
 	gzipWriter := gzip.NewWriter(&buf)
@@ -175,34 +210,10 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 
 	url := s.baseURL + "/updates"
 
-	client := resty.New()
+	s.client.SetHeader("Content-type", "application/json")
+	s.client.SetHeader("Content-Encoding", "gzip")
 
-	// Настройка retry
-	client.SetRetryCount(3)
-	client.SetRetryAfter(func(client *resty.Client, response *resty.Response) (time.Duration, error) {
-		retryCount := response.Request.Attempt
-		switch retryCount {
-		case 1:
-			return 1 * time.Second, nil
-		case 2:
-			return 3 * time.Second, nil
-		case 3:
-			return 5 * time.Second, nil
-		default:
-			return 0, nil
-		}
-	})
-	client.AddRetryCondition(func(response *resty.Response, err error) bool {
-		if response.StatusCode() == http.StatusServiceUnavailable || response.StatusCode() == http.StatusInternalServerError {
-			return true
-		}
-		return false
-	}) // retry только в случае, если сервер недоступен (maintenance или перегрузка) или внут. ошибка
-
-	client.SetHeader("Content-type", "application/json")
-	client.SetHeader("Content-Encoding", "gzip")
-
-	resp, err := client.R().SetBody(buf.Bytes()).Post(url)
+	resp, err := s.client.R().SetBody(buf.Bytes()).Post(url)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
@@ -211,4 +222,13 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 		return fmt.Errorf("request %v failed: %w", url, err)
 	}
 	return nil
+}
+
+func (s *sender) generateHash(src []byte) (string, error) {
+	h := hmac.New(sha256.New, s.hashKey)
+	_, err := h.Write(src)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }

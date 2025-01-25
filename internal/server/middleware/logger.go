@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-type middleware struct {
-	Log *zap.Logger // Log Синглтон.
-}
-
 // InitializeZap инициализирует синглтон логера с необходимым уровнем логирования.
 func (m *middleware) InitializeZap(level string) error {
 
