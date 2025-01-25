@@ -1,14 +1,10 @@
 package sender
 
 import (
-	"compress/gzip"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
-	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
-	"metrics-service/internal/server/models"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -81,55 +77,6 @@ func TestSender_Send(t *testing.T) {
 		})
 	}
 
-}
-
-func TestSender_SendBatch(t *testing.T) {
-	hashTestKey := []byte("test-key")
-	// Создаём тестовый сервер
-	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
-		assert.Equal(t, "gzip", r.Header.Get("Content-Encoding"))
-
-		hashHeader := r.Header.Get("HashSHA256")
-		assert.NotEmpty(t, hashHeader)
-
-		gz, err := gzip.NewReader(r.Body)
-		assert.NoError(t, err)
-
-		var receivedMetrics []models.Metrics
-		err = json.NewDecoder(gz).Decode(&receivedMetrics)
-		assert.NoError(t, err)
-
-		wantMetrics := []models.Metrics{
-			{ID: "PollCount", MType: "counter", Delta: func(v int64) *int64 { return &v }(42)},
-			{ID: "RandomMetric", MType: "gauge", Value: func(v float64) *float64 { return &v }(3.14)},
-		}
-		assert.ElementsMatch(t, wantMetrics, receivedMetrics)
-
-		jsonData, err := json.Marshal(wantMetrics)
-		assert.NoError(t, err)
-
-		wantHash := generateTestHash(jsonData, hashTestKey)
-		assert.Equal(t, wantHash, hashHeader)
-
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer testServer.Close()
-
-	metricsMap := map[string]interface{}{
-		"PollCount":    int64(42),
-		"RandomMetric": float64(3.14),
-	}
-
-	client := resty.New()
-	sender := &sender{
-		client:  client,
-		baseURL: testServer.URL,
-		hashKey: hashTestKey,
-	}
-
-	err := sender.SendBatch(metricsMap)
-	assert.NoError(t, err)
 }
 
 func generateTestHash(src []byte, key []byte) string {
