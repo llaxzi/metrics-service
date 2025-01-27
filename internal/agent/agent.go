@@ -10,7 +10,7 @@ import (
 )
 
 type Agent interface {
-	Work()
+	Work(doneCh chan struct{})
 }
 
 type agent struct {
@@ -29,12 +29,12 @@ func NewAgent(pollInterval int, reportInterval int, metricsCollector collector.M
 
 // Work Использует Ticker и select для обработки временных интервалов
 // Также лочим данные от data race мьютексом
-func (a *agent) Work() {
+func (a *agent) Work(doneCh chan struct{}) {
 
 	pollTicker := time.NewTicker(time.Second * time.Duration(a.pollInterval))
 	reportTicker := time.NewTicker(time.Second * time.Duration(a.reportInterval))
 
-	for {
+	/*for {
 		select {
 		case <-pollTicker.C:
 			a.mu.Lock()
@@ -57,5 +57,43 @@ func (a *agent) Work() {
 
 			a.mu.Unlock()
 		}
-	}
+	}*/
+
+	go func() {
+		for {
+			select {
+			case <-pollTicker.C:
+				a.mu.Lock()
+				a.metrics = a.metricsCollector.Collect()
+				a.pollCount++
+				a.metrics["PollCount"] = a.pollCount
+				fmt.Printf("Collected metrics, pollCount= %d\n", a.pollCount)
+				a.mu.Unlock()
+			case <-doneCh:
+				pollTicker.Stop()
+				return
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case <-reportTicker.C:
+				a.mu.Lock()
+				err := a.sender.SendBatch(a.metrics)
+				if err != nil {
+					log.Println(err)
+				} else {
+					fmt.Println("Send metrics")
+					a.pollCount = 0 // Сбрасываем при успешной отправке, т.к. метрика типа counter
+				}
+				a.mu.Unlock()
+			case <-doneCh:
+				reportTicker.Stop()
+				return
+			}
+		}
+	}()
+
 }
