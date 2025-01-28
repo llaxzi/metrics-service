@@ -22,7 +22,7 @@ func main() {
 	metricsSender := sender.NewSender(baseURL, []byte(flagHashKey))
 
 	// Создаем агент
-	a := agent.NewAgent(pollInterval, reportInterval, metricsCollector, metricsSender)
+	a := agent.NewAgent(pollInterval, reportInterval, flagRateLimit, metricsCollector, metricsSender)
 
 	doneCh := make(chan struct{})
 	// Перехватываем сигнал Ctrl+C
@@ -30,7 +30,12 @@ func main() {
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
 
 	// Запускаем агент
-	go a.Work(doneCh)
+	a.Collect(doneCh)
+	if flagReportBatch {
+		a.ReportBatch(doneCh)
+	} else {
+		a.Report(doneCh)
+	}
 
 	<-signalCh
 	close(doneCh)

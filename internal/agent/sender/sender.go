@@ -16,7 +16,7 @@ import (
 )
 
 type Sender interface {
-	SendJSON(metricsMap map[string]interface{}) error
+	SendJSON(metricName string, metricValI interface{}) error
 	SendBatch(metricsMap map[string]interface{}) error
 }
 
@@ -93,64 +93,71 @@ func (s *sender) Send(metricsMap map[string]interface{}) error {
 	return nil
 }
 
-func (s *sender) SendJSON(metricsMap map[string]interface{}) error {
-	for metricName, metricValI := range metricsMap {
+func (s *sender) SendJSON(metricName string, metricValI interface{}) error {
 
-		var body models.Metrics
+	var body models.Metrics
 
-		if metricName == "PollCount" {
-			metricType := "counter"
+	if metricName == "PollCount" {
+		metricType := "counter"
 
-			metricVal, ok := metricValI.(int64)
-			if !ok {
-				return fmt.Errorf("invalid type for counter metric: %v", metricName)
-			}
-
-			body = models.Metrics{ID: metricName, MType: metricType, Delta: &metricVal}
-		} else {
-			metricType := "gauge"
-
-			metricVal, ok := metricValI.(float64)
-			if !ok {
-				return fmt.Errorf("invalid type for gauge metric: %v", metricName)
-			}
-
-			body = models.Metrics{ID: metricName, MType: metricType, Value: &metricVal}
+		metricVal, ok := metricValI.(int64)
+		if !ok {
+			return fmt.Errorf("invalid type for counter metric: %v", metricName)
 		}
 
-		jsonData, err := json.Marshal(body)
-		if err != nil {
-			return fmt.Errorf("failed to marshal JSON: %v", err)
+		body = models.Metrics{ID: metricName, MType: metricType, Delta: &metricVal}
+	} else {
+		metricType := "gauge"
+
+		metricVal, ok := metricValI.(float64)
+		if !ok {
+			return fmt.Errorf("invalid type for gauge metric: %v", metricName)
 		}
 
-		// Сжатие данных в gzip
-		var buf bytes.Buffer
-		gzipWriter := gzip.NewWriter(&buf)
-
-		if _, err = gzipWriter.Write(jsonData); err != nil {
-			return fmt.Errorf("failed to gzip data: %v", err)
-		}
-		if err = gzipWriter.Close(); err != nil {
-			return fmt.Errorf("failed to close gzip writer: %v", err)
-		}
-
-		url := s.baseURL + "/update"
-
-		client := resty.New()
-		client.SetHeader("Content-type", "application/json")
-		client.SetHeader("Content-Encoding", "gzip")
-
-		resp, err := client.R().SetBody(buf.Bytes()).Post(url)
-		if err != nil {
-			return fmt.Errorf("failed to send request: %v", err)
-		}
-
-		if resp.StatusCode() != 200 {
-			return fmt.Errorf("request %v failed: %v", url, err)
-		}
-
+		body = models.Metrics{ID: metricName, MType: metricType, Value: &metricVal}
 	}
-	fmt.Println("All metrics send to server")
+
+	jsonData, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %v", err)
+	}
+
+	// Хеш в заголовке
+	if len(s.hashKey) > 0 {
+		hash, err := s.generateHash(jsonData)
+		if err != nil {
+			return fmt.Errorf("failed to generate hash: %w", err)
+		}
+		s.client.SetHeader("HashSHA256", hash)
+	}
+
+	// Сжатие данных в gzip
+	var buf bytes.Buffer
+	gzipWriter := gzip.NewWriter(&buf)
+
+	if _, err = gzipWriter.Write(jsonData); err != nil {
+		return fmt.Errorf("failed to gzip data: %v", err)
+	}
+	if err = gzipWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close gzip writer: %v", err)
+	}
+
+	url := s.baseURL + "/update"
+
+	client := resty.New()
+	client.SetHeader("Content-type", "application/json")
+	client.SetHeader("Content-Encoding", "gzip")
+
+	resp, err := client.R().SetBody(buf.Bytes()).Post(url)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %v", err)
+	}
+
+	if resp.StatusCode() != 200 {
+		return fmt.Errorf("request %v failed: %v", url, err)
+	}
+
+	fmt.Println("Metric send to server")
 	return nil
 }
 
