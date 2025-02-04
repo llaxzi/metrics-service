@@ -13,7 +13,7 @@ import (
 
 func TestMiddleware_WithGzip(t *testing.T) {
 	r := gin.Default()
-	m := NewMiddleware()
+	m := NewMiddleware([]byte(""))
 
 	r.Use(m.WithGzip())
 

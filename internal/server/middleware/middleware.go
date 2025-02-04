@@ -11,6 +11,11 @@ type Middleware interface {
 	WithGzip() gin.HandlerFunc
 }
 
-func NewMiddleware() Middleware {
-	return &middleware{zap.NewNop()}
+type middleware struct {
+	Log     *zap.Logger // Log Синглтон.
+	hashKey []byte
+}
+
+func NewMiddleware(hashKey []byte) Middleware {
+	return &middleware{zap.NewNop(), hashKey}
 }

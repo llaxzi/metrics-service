@@ -1,6 +1,9 @@
 package sender
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -65,12 +68,19 @@ func TestSender_Send(t *testing.T) {
 			defer server.Close()
 
 			s := &sender{
-				server.Client(),
+				nil,
 				server.URL,
+				nil,
 			}
 
 			s.Send(test.metricsMap)
 		})
 	}
 
+}
+
+func generateTestHash(src []byte, key []byte) string {
+	h := hmac.New(sha256.New, key)
+	h.Write(src)
+	return hex.EncodeToString(h.Sum(nil))
 }

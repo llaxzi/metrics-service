@@ -64,6 +64,7 @@ func (m *middleware) WithGzip() gin.HandlerFunc {
 			cr, err := newGzipReader(ctx.Request.Body)
 			if err != nil {
 				ctx.Writer.WriteHeader(http.StatusInternalServerError)
+				return
 			}
 			ctx.Request.Body = cr
 			defer cr.Close()

@@ -1,8 +1,12 @@
 package collector
 
 import (
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
 	"math/rand"
 	"runtime"
+	"strconv"
+	"time"
 )
 
 type MetricsCollector interface {
@@ -17,6 +21,7 @@ func NewMetricsCollector() MetricsCollector {
 }
 
 func (m *metricsCollector) Collect() map[string]interface{} {
+	//runtime
 	var memStats runtime.MemStats
 	metricsMap := make(map[string]interface{})
 
@@ -50,6 +55,15 @@ func (m *metricsCollector) Collect() map[string]interface{} {
 	metricsMap["GCSys"] = float64(memStats.GCSys)
 
 	metricsMap["RandomValue"] = rand.Float64()
+
+	// gopsutil
+	v, _ := mem.VirtualMemory()
+	metricsMap["TotalMemory"] = float64(v.Total)
+	metricsMap["FreeMemory"] = float64(v.Free)
+	percentages, _ := cpu.Percent(1*time.Second, true)
+	for i, percentage := range percentages {
+		metricsMap["CPUutilization"+strconv.Itoa(i+1)] = percentage
+	}
 
 	return metricsMap
 }
