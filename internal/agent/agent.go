@@ -3,10 +3,11 @@ package agent
 import (
 	"fmt"
 	"log"
-	"metrics-service/internal/agent/collector"
-	sender2 "metrics-service/internal/agent/sender"
 	"sync"
 	"time"
+
+	"metrics-service/internal/agent/collector"
+	sender2 "metrics-service/internal/agent/sender"
 )
 
 type Agent interface {

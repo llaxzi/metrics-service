@@ -8,11 +8,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"metrics-service/internal/server/models"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/go-resty/resty/v2"
+
+	"metrics-service/internal/server/models"
 )
 
 type Sender interface {

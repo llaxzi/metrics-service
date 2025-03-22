@@ -5,10 +5,12 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/gin-gonic/gin"
 	"io"
-	apperrors "metrics-service/internal/server/errors"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	apperrors "metrics-service/internal/server/errors"
 )
 
 type responseWriter struct {

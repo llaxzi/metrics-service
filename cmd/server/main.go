@@ -3,16 +3,18 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
+	"syscall"
+	"time"
+
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
-	"log"
+
 	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/middleware"
 	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
-	"syscall"
-	"time"
 )
 
 func main() {

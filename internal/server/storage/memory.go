@@ -3,10 +3,11 @@ package storage
 import (
 	"context"
 	"fmt"
-	apperrors "metrics-service/internal/server/errors"
-	"metrics-service/internal/server/models"
 	"strconv"
 	"sync"
+
+	apperrors "metrics-service/internal/server/errors"
+	"metrics-service/internal/server/models"
 )
 
 /*

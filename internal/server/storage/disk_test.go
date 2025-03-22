@@ -3,9 +3,7 @@ package storage
 import (
 	"sync"
 	"testing"
-)
 
-import (
 	"github.com/stretchr/testify/assert"
 )
 

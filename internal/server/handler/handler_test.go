@@ -5,18 +5,20 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"html/template"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"html/template"
+
 	"metrics-service/internal/server/mocks"
 	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestMetricsHandler_Update(t *testing.T) {

@@ -2,11 +2,13 @@ package handler
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+
 	"metrics-service/internal/server/models"
 	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
-	"net/http"
 )
 
 type MetricsHandler interface {

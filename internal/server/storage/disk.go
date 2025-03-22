@@ -2,8 +2,9 @@ package storage
 
 import (
 	"encoding/json"
-	"metrics-service/internal/server/models"
 	"os"
+
+	"metrics-service/internal/server/models"
 )
 
 type DiskWriter interface {

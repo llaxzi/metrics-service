@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
+
 	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
-	"net/http"
 )
 
 type HTMLHandler interface {

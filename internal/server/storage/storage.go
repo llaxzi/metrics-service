@@ -3,10 +3,12 @@ package storage
 import (
 	"context"
 	"database/sql"
-	_ "github.com/jackc/pgx/v5/stdlib"
 	"log"
-	"metrics-service/internal/server/models"
 	"sync"
+
+	_ "github.com/jackc/pgx/v5/stdlib"
+
+	"metrics-service/internal/server/models"
 )
 
 // TODO: внешний контекст к методам

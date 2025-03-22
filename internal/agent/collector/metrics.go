@@ -1,12 +1,13 @@
 package collector
 
 import (
-	"github.com/shirou/gopsutil/v4/cpu"
-	"github.com/shirou/gopsutil/v4/mem"
 	"math/rand"
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
 )
 
 type MetricsCollector interface {
