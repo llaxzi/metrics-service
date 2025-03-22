@@ -174,15 +174,26 @@ func (h *metricsHandler) Ping(ctx *gin.Context) {
 }
 
 func (h *metricsHandler) UpdateBatch(ctx *gin.Context) {
-	var metrics []models.Metrics
-	dec := json.NewDecoder(ctx.Request.Body)
-	err := dec.Decode(&metrics)
 
-	if err != nil {
+	// Избегаем reflect.growslice поэтапным декодированием.
+	// Не сказал бы, что проблема была критичная (или вообще была), скорее просто пощупать профилирование
+	var raw []json.RawMessage
+	if err := json.NewDecoder(ctx.Request.Body).Decode(&raw); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid JSON"})
 		return
 	}
-	err = h.retryer.Retry(func() error {
+
+	metrics := make([]models.Metrics, 0, len(raw))
+	for _, r := range raw {
+		var m models.Metrics
+		if err := json.Unmarshal(r, &m); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "invalid metric in array"})
+			return
+		}
+		metrics = append(metrics, m)
+	}
+
+	err := h.retryer.Retry(func() error {
 		return h.storage.UpdateBatch(ctx, metrics)
 	})
 	if err != nil {
