@@ -88,3 +88,37 @@ func TestMiddleware_WithGzip(t *testing.T) {
 
 	})
 }
+
+func BenchmarkWithGzip(b *testing.B) {
+	gin.SetMode(gin.ReleaseMode)
+	m := &middleware{}
+	r := gin.New()
+	r.Use(m.WithGzip())
+	r.POST("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "Hello, World!")
+	})
+
+	b.Run("WithoutGzip", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			req := httptest.NewRequest(http.MethodPost, "/test", bytes.NewBufferString("test data"))
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+		}
+	})
+
+	b.Run("WithGzip", func(b *testing.B) {
+		var compressedData bytes.Buffer
+		gz := gzip.NewWriter(&compressedData)
+		_, _ = gz.Write([]byte("test data"))
+		gz.Close()
+
+		for i := 0; i < b.N; i++ {
+			req := httptest.NewRequest(http.MethodPost, "/test", &compressedData)
+			req.Header.Set("Content-Encoding", "gzip")
+			req.Header.Set("Accept-Encoding", "gzip")
+
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+		}
+	})
+}

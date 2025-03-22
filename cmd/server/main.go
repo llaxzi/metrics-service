@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 	"log"
 	apperrors "metrics-service/internal/server/errors"
@@ -86,9 +87,10 @@ func main() {
 	gzipGroup.POST("/value/", metricsHandler.GetJSON)
 	gzipGroup.POST("/updates/", metricsHandler.UpdateBatch)
 
+	pprof.Register(server, "dev/pprof")
+
 	err = server.Run(flagRunAddr)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-
 }
