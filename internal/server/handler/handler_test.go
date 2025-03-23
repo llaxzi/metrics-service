@@ -574,7 +574,7 @@ func ExampleMetricsHandler_UpdateBatch() {
 
 }
 
-func ExampleHtmlHandler_Get() {
+func ExampleHTMLHandler_Get() {
 
 	// Настраиваем тестовое окружение
 	r := gin.Default()
