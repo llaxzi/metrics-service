@@ -92,7 +92,7 @@ func TestMiddleware_WithGzip(t *testing.T) {
 
 func BenchmarkWithGzip(b *testing.B) {
 	gin.SetMode(gin.ReleaseMode)
-	m := &middleware{}
+	m := &Middleware{}
 	r := gin.New()
 	r.Use(m.WithGzip())
 	r.POST("/test", func(c *gin.Context) {

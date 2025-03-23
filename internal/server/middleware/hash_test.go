@@ -20,7 +20,7 @@ func generateHMAC(data, key []byte) string {
 
 func BenchmarkWithHMAC(b *testing.B) {
 	gin.SetMode(gin.TestMode)
-	m := &middleware{hashKey: []byte("secret-key")}
+	m := &Middleware{hashKey: []byte("secret-key")}
 	r := gin.New()
 	r.Use(m.WithHMAC())
 	r.POST("/test", func(c *gin.Context) {

@@ -16,17 +16,17 @@ type IHTMLHandler interface {
 
 // NewHTMLHandler создает новый экземпляр IHTMLHandler
 func NewHTMLHandler(storage storage.Storage, retryer retry.Retryer) IHTMLHandler {
-	return &HtmlHandler{storage, retryer}
+	return &HTMLHandler{storage, retryer}
 }
 
 // HtmlHandler реализует интерфейс IHTMLHandler и отвечает за обработку HTTP-запросов, связанных с HTML отдачей метрик.
-type HtmlHandler struct {
+type HTMLHandler struct {
 	storage storage.Storage
 	retryer retry.Retryer
 }
 
 // Get возвращает все метрики в HTML формате.
-func (h *HtmlHandler) Get(ctx *gin.Context) {
+func (h *HTMLHandler) Get(ctx *gin.Context) {
 	var metrics [][]string
 	err := h.retryer.Retry(func() error {
 		var err error
