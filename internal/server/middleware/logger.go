@@ -9,7 +9,7 @@ import (
 )
 
 // InitializeZap инициализирует синглтон логера с необходимым уровнем логирования.
-func (m *middleware) InitializeZap(level string) error {
+func (m *Middleware) InitializeZap(level string) error {
 
 	lvl, err := zap.ParseAtomicLevel(level)
 	if err != nil {
@@ -28,7 +28,11 @@ func (m *middleware) InitializeZap(level string) error {
 	return nil
 }
 
-func (m *middleware) WithLogging() gin.HandlerFunc {
+// WithLogging добавляет middleware для логирования HTTP-запросов и ответов.
+//
+// Логирует входящий HTTP-запрос с указанием метода, пути и времени обработки.
+// После завершения обработки запроса также логирует статус-код ответа и его размер.
+func (m *Middleware) WithLogging() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		start := time.Now()

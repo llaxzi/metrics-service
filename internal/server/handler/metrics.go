@@ -11,7 +11,8 @@ import (
 	"metrics-service/internal/server/storage"
 )
 
-type MetricsHandler interface {
+// IMetricsHandler определяет интерфейс для обработки HTTP-запросов к метрикам.
+type IMetricsHandler interface {
 	Update(ctx *gin.Context)
 	Get(ctx *gin.Context)
 	UpdateJSON(ctx *gin.Context)
@@ -20,17 +21,24 @@ type MetricsHandler interface {
 	UpdateBatch(ctx *gin.Context)
 }
 
-func NewMetricsHandler(storage storage.Storage, retryer retry.Retryer, isSync bool) MetricsHandler {
-	return &metricsHandler{storage, retryer, isSync}
+// NewMetricsHandler создает новый экземпляр IMetricsHandler
+//
+// Storage - хранилище метрик.
+// Retryer - экземпляр retry.
+// IsSync - флаг синхронного сохранения на диск.
+func NewMetricsHandler(storage storage.Storage, retryer retry.Retryer, isSync bool) IMetricsHandler {
+	return &MetricsHandler{storage, retryer, isSync}
 }
 
-type metricsHandler struct {
+// MetricsHandler реализует интерфейс IMetricsHandler и отвечает за обработку HTTP-запросов к метрикам.
+type MetricsHandler struct {
 	storage storage.Storage
 	retryer retry.Retryer
 	isSync  bool
 }
 
-func (h *metricsHandler) Update(ctx *gin.Context) {
+// Update обновляет значение метрики по URL параметрам запроса.
+func (h *MetricsHandler) Update(ctx *gin.Context) {
 
 	metricType := ctx.Param("metricType")
 	metricName := ctx.Param("metricName")
@@ -63,7 +71,8 @@ func (h *metricsHandler) Update(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "updated successfully")
 }
 
-func (h *metricsHandler) Get(ctx *gin.Context) {
+// Get возвращает значение метрики по имени и типу.
+func (h *MetricsHandler) Get(ctx *gin.Context) {
 
 	metricName := ctx.Param("metricName")
 	metricType := ctx.Param("metricType")
@@ -83,9 +92,8 @@ func (h *metricsHandler) Get(ctx *gin.Context) {
 
 }
 
-// JSON
-
-func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
+// UpdateJSON обновляет метрику, принимая JSON в теле запроса.
+func (h *MetricsHandler) UpdateJSON(ctx *gin.Context) {
 
 	contentType := ctx.GetHeader("Content-type")
 	if contentType != "application/json" {
@@ -131,7 +139,8 @@ func (h *metricsHandler) UpdateJSON(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, requestData)
 }
 
-func (h *metricsHandler) GetJSON(ctx *gin.Context) {
+// GetJSON возвращает значение метрики в формате JSON.
+func (h *MetricsHandler) GetJSON(ctx *gin.Context) {
 
 	contentType := ctx.GetHeader("Content-type")
 	if contentType != "application/json" {
@@ -164,7 +173,8 @@ func (h *metricsHandler) GetJSON(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, requestData)
 }
 
-func (h *metricsHandler) Ping(ctx *gin.Context) {
+// Ping проверяет доступность хранилища.
+func (h *MetricsHandler) Ping(ctx *gin.Context) {
 	err := h.retryer.Retry(func() error {
 		return h.storage.Ping(ctx)
 	})
@@ -175,7 +185,8 @@ func (h *metricsHandler) Ping(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, "ok")
 }
 
-func (h *metricsHandler) UpdateBatch(ctx *gin.Context) {
+// UpdateBatch обновляет несколько метрик из массива JSON-объектов.
+func (h *MetricsHandler) UpdateBatch(ctx *gin.Context) {
 
 	// Избегаем reflect.growslice поэтапным декодированием.
 	// Не сказал бы, что проблема была критичная (или вообще была), скорее просто пощупать профилирование

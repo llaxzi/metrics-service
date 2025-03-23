@@ -46,7 +46,14 @@ func (g *gzipReader) Close() error {
 	return g.r.Close()
 }
 
-func (m *middleware) WithGzip() gin.HandlerFunc {
+// WithGzip добавляет middleware для сжатия и декомпрессии данных с помощью gzip.
+//
+// Если клиент поддерживает gzip (заголовок "Accept-Encoding" содержит "gzip"),
+// то ответы сервера будут сжиматься перед отправкой.
+//
+// Если запрос от клиента сжат с использованием gzip (заголовок "Content-Encoding" содержит "gzip"),
+// то middleware разожмет тело запроса перед его обработкой.
+func (m *Middleware) WithGzip() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		acceptGzip := strings.Contains(ctx.Request.Header.Get("Accept-Encoding"), "gzip")

@@ -9,20 +9,24 @@ import (
 	"metrics-service/internal/server/storage"
 )
 
-type HTMLHandler interface {
+// IHTMLHandler определяет интерфейс для обработки HTTP-запросов, связанных с HTML отдачей метрик.
+type IHTMLHandler interface {
 	Get(ctx *gin.Context)
 }
 
-func NewHTMLHandler(storage storage.Storage, retryer retry.Retryer) HTMLHandler {
-	return &htmlHandler{storage, retryer}
+// NewHTMLHandler создает новый экземпляр IHTMLHandler
+func NewHTMLHandler(storage storage.Storage, retryer retry.Retryer) IHTMLHandler {
+	return &HtmlHandler{storage, retryer}
 }
 
-type htmlHandler struct {
+// HtmlHandler реализует интерфейс IHTMLHandler и отвечает за обработку HTTP-запросов, связанных с HTML отдачей метрик.
+type HtmlHandler struct {
 	storage storage.Storage
 	retryer retry.Retryer
 }
 
-func (h *htmlHandler) Get(ctx *gin.Context) {
+// Get возвращает все метрики в HTML формате.
+func (h *HtmlHandler) Get(ctx *gin.Context) {
 	var metrics [][]string
 	err := h.retryer.Retry(func() error {
 		var err error
