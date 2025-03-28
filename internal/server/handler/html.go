@@ -1,11 +1,11 @@
 package handler
 
 import (
+	"github.com/llaxzi/retryables/v2"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
-	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
 )
 
@@ -15,14 +15,14 @@ type IHTMLHandler interface {
 }
 
 // NewHTMLHandler создает новый экземпляр IHTMLHandler
-func NewHTMLHandler(storage storage.Storage, retryer retry.Retryer) IHTMLHandler {
+func NewHTMLHandler(storage storage.Storage, retryer *retryables.Retryer) IHTMLHandler {
 	return &HTMLHandler{storage, retryer}
 }
 
-// HtmlHandler реализует интерфейс IHTMLHandler и отвечает за обработку HTTP-запросов, связанных с HTML отдачей метрик.
+// HTMLHandler реализует интерфейс IHTMLHandler и отвечает за обработку HTTP-запросов, связанных с HTML отдачей метрик.
 type HTMLHandler struct {
 	storage storage.Storage
-	retryer retry.Retryer
+	retryer *retryables.Retryer
 }
 
 // Get возвращает все метрики в HTML формате.

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"github.com/llaxzi/retryables/v2"
 	"log"
 	"syscall"
 	"time"
@@ -13,7 +14,6 @@ import (
 	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/middleware"
-	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
 )
 
@@ -35,7 +35,7 @@ func main() {
 		log.Fatalf("Failed to initialize storage: %v", err)
 	}
 
-	storageRetryer := retry.NewRetryer()
+	storageRetryer := retryables.NewRetryer(nil)
 	storageRetryer.SetConditionFunc(func(err error) bool {
 		return errors.Is(err, apperrors.ErrPgConnExc) || errors.Is(err, syscall.EBUSY)
 	})

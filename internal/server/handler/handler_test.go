@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/llaxzi/retryables/v2"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
@@ -18,7 +19,6 @@ import (
 
 	"metrics-service/internal/server/mocks"
 	"metrics-service/internal/server/models"
-	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
 )
 
@@ -57,7 +57,7 @@ func TestMetricsHandler_Update(t *testing.T) {
 		router := gin.Default()
 
 		memoryStorage, _ := storage.NewStorage("", "", false, 300)
-		retryer := retry.NewRetryer()
+		retryer := retryables.NewRetryer(nil)
 		retryer.SetCount(1)
 
 		metricsH := NewMetricsHandler(memoryStorage, retryer, false)
@@ -108,7 +108,7 @@ func TestMetricsHandler_Get(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 			test.storageSet(memoryStorage)
 
@@ -168,7 +168,7 @@ func TestHtmlHandler_Get(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 			test.storageSet(memoryStorage)
 
@@ -254,7 +254,7 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			router := gin.Default()
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 
 			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
@@ -305,7 +305,7 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 			test.setup(memoryStorage)
 
@@ -363,7 +363,7 @@ func TestMetricsHandler_Ping(t *testing.T) {
 				storage.EXPECT().Ping(gomock.Any()).Return(errors.New("server error"))
 			}
 
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 
 			metricsH := NewMetricsHandler(storage, retryer, false)
@@ -406,7 +406,7 @@ func TestMetricsHandler_UpdateBatch(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 
 			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
@@ -435,7 +435,7 @@ func ExampleMetricsHandler_Update() {
 	// Настраиваем тестовое окружение
 	r := gin.Default()
 	memoryStorage, _ := storage.NewStorage("", "", false, 300)
-	retryer := retry.NewRetryer()
+	retryer := retryables.NewRetryer(nil)
 	retryer.SetCount(1)
 	h := NewMetricsHandler(memoryStorage, retryer, false)
 	r.PUT("/update/:metricType/:metricName/:metricVal", h.Update)
@@ -456,7 +456,7 @@ func ExampleMetricsHandler_Get() {
 	// Настраиваем тестовое окружение
 	r := gin.Default()
 	memoryStorage, _ := storage.NewStorage("", "", false, 300)
-	retryer := retry.NewRetryer()
+	retryer := retryables.NewRetryer(nil)
 	retryer.SetCount(1)
 	h := NewMetricsHandler(memoryStorage, retryer, false)
 	r.GET("/value/:metricType/:metricName", h.Get)
@@ -477,7 +477,7 @@ func ExampleMetricsHandler_UpdateJSON() {
 	// Настраиваем тестовое окружение
 	r := gin.Default()
 	memoryStorage, _ := storage.NewStorage("", "", false, 300)
-	retryer := retry.NewRetryer()
+	retryer := retryables.NewRetryer(nil)
 	retryer.SetCount(1)
 	h := NewMetricsHandler(memoryStorage, retryer, false)
 	r.POST("/update", h.UpdateJSON)
@@ -503,7 +503,7 @@ func ExampleMetricsHandler_GetJSON() {
 	// Настраиваем тестовое окружение
 	r := gin.Default()
 	memoryStorage, _ := storage.NewStorage("", "", false, 300)
-	retryer := retry.NewRetryer()
+	retryer := retryables.NewRetryer(nil)
 	retryer.SetCount(1)
 	h := NewMetricsHandler(memoryStorage, retryer, false)
 	r.POST("/value", h.GetJSON)
@@ -530,7 +530,7 @@ func ExampleMetricsHandler_Ping() {
 	r := gin.Default()
 	// Будем пинговать memoryStorage - получим 500
 	memoryStorage, _ := storage.NewStorage("", "", false, 300)
-	retryer := retry.NewRetryer()
+	retryer := retryables.NewRetryer(nil)
 	retryer.SetCount(1)
 	h := NewMetricsHandler(memoryStorage, retryer, false)
 	r.GET("/ping", h.Ping)
@@ -550,7 +550,7 @@ func ExampleMetricsHandler_UpdateBatch() {
 	// Настраиваем тестовое окружение
 	r := gin.Default()
 	memoryStorage, _ := storage.NewStorage("", "", false, 300)
-	retryer := retry.NewRetryer()
+	retryer := retryables.NewRetryer(nil)
 	retryer.SetCount(1)
 	h := NewMetricsHandler(memoryStorage, retryer, false)
 	r.POST("/updates", h.UpdateBatch)
@@ -579,7 +579,7 @@ func ExampleHTMLHandler_Get() {
 	// Настраиваем тестовое окружение
 	r := gin.Default()
 	memoryStorage, _ := storage.NewStorage("", "", false, 300)
-	retryer := retry.NewRetryer()
+	retryer := retryables.NewRetryer(nil)
 	retryer.SetCount(1)
 	h := NewHTMLHandler(memoryStorage, retryer)
 	r.GET("/", h.Get)

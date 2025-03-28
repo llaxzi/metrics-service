@@ -1,3 +1,4 @@
+// Package middleware содержит интерфейс middleware и его реализацию.
 package middleware
 
 import (

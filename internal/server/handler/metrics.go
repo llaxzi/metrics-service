@@ -2,12 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"github.com/llaxzi/retryables/v2"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 
 	"metrics-service/internal/server/models"
-	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
 )
 
@@ -26,14 +26,14 @@ type IMetricsHandler interface {
 // Storage - хранилище метрик.
 // Retryer - экземпляр retry.
 // IsSync - флаг синхронного сохранения на диск.
-func NewMetricsHandler(storage storage.Storage, retryer retry.Retryer, isSync bool) IMetricsHandler {
+func NewMetricsHandler(storage storage.Storage, retryer *retryables.Retryer, isSync bool) IMetricsHandler {
 	return &MetricsHandler{storage, retryer, isSync}
 }
 
 // MetricsHandler реализует интерфейс IMetricsHandler и отвечает за обработку HTTP-запросов к метрикам.
 type MetricsHandler struct {
 	storage storage.Storage
-	retryer retry.Retryer
+	retryer *retryables.Retryer
 	isSync  bool
 }
 

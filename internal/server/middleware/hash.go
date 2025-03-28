@@ -13,11 +13,13 @@ import (
 	apperrors "metrics-service/internal/server/errors"
 )
 
+// responseWriter перехватывает тело ответа для последующего вычисления HMAC-хэша.
 type responseWriter struct {
 	gin.ResponseWriter
 	body []byte
 }
 
+// Write сохраняет записываемые данные в body и передает их в оригинальный ResponseWriter.
 func (rw *responseWriter) Write(p []byte) (n int, err error) {
 	rw.body = append(rw.body, p...)
 	return rw.ResponseWriter.Write(p)

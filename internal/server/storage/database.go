@@ -20,6 +20,7 @@ const (
 	timeout = 1
 )
 
+// repository реализует Storage в виде соединения с базой данных Postgres
 type repository struct {
 	db *sql.DB
 }

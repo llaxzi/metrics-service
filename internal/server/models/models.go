@@ -1,3 +1,4 @@
+// Package models содержит модели данных.
 package models
 
 type Metrics struct {

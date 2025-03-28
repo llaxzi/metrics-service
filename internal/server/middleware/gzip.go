@@ -9,19 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// newGzipWriter создает новый gzipWriter, оборачивающий gin.ResponseWriter.
 func newGzipWriter(w gin.ResponseWriter) *gzipWriter {
 	return &gzipWriter{w, gzip.NewWriter(w)}
 }
 
+// gzipWriter оборачивает gin.ResponseWriter и выполняет сжатие данных перед отправкой клиенту.
 type gzipWriter struct {
 	gin.ResponseWriter
 	gzWriter *gzip.Writer
 }
 
+// Write выполняет сжатие данных перед их записью в ResponseWriter.
 func (w *gzipWriter) Write(b []byte) (int, error) {
 	return w.gzWriter.Write(b)
 }
 
+// newGzipReader создает новый gzipReader для разжатия тела запроса.
 func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -30,15 +34,18 @@ func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	return &gzipReader{r, zr}, nil
 }
 
+// gzipReader оборачивает io.ReadCloser и выполняет разжатие входных данных.
 type gzipReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader
 }
 
+// Read считывает разжатые данные.
 func (g *gzipReader) Read(p []byte) (n int, err error) {
 	return g.zr.Read(p)
 }
 
+// Close закрывает gzipReader и исходный поток данных.
 func (g *gzipReader) Close() error {
 	if err := g.zr.Close(); err != nil {
 		return err
