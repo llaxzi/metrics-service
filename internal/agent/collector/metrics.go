@@ -1,3 +1,4 @@
+// Package collector предоставляет функциональность для сбора системных метрик.
 package collector
 
 import (
@@ -10,17 +11,28 @@ import (
 	"github.com/shirou/gopsutil/v4/mem"
 )
 
-type MetricsCollector interface {
+// IMetricsCollector определяет интерфейс сборщика метрик.
+
+type IMetricsCollector interface {
+	// Collect возвращает мапу с метриками.
 	Collect() map[string]interface{}
 }
 
+// metricsCollector представляет реализацию IMetricsCollector.
 type metricsCollector struct {
 }
 
-func NewMetricsCollector() MetricsCollector {
+// NewMetricsCollector создает и возвращает новый экземпляр IMetricsCollector.
+func NewMetricsCollector() IMetricsCollector {
 	return &metricsCollector{}
 }
 
+// Collect собирает различные системные метрики, включая:
+// - Статистику работы runtime
+// - Использование памяти
+// - Загрузку процессора
+// - Случайное значение (RandomValue) для тестирования;
+// Возвращает карту, содержащую названия метрик и их значения.
 func (m *metricsCollector) Collect() map[string]interface{} {
 	//runtime
 	var memStats runtime.MemStats

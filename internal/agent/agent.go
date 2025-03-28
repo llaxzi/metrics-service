@@ -1,3 +1,4 @@
+// Package agent предоставляет функциональность для сбора и отправки метрик с использованием агентов.
 package agent
 
 import (
@@ -7,18 +8,23 @@ import (
 	"time"
 
 	"metrics-service/internal/agent/collector"
-	sender2 "metrics-service/internal/agent/sender"
+	senderp "metrics-service/internal/agent/sender"
 )
 
+// Agent определяет интерфейс для агентов, которые собирают и отправляют метрики.
 type Agent interface {
+	// Collect запускает сбор метрик
 	Collect(doneCh chan struct{})
+	// ReportBatch отправляет метрики в пакетном режиме с заданным интервалом.
 	ReportBatch(doneCh chan struct{})
+	// Report отправляет метрики по одной с ограничением на количество одновременных запросов.
 	Report(doneCh chan struct{})
 }
 
+// agent реализует интерфейс Agent.
 type agent struct {
-	metricsCollector collector.MetricsCollector
-	sender           sender2.Sender
+	metricsCollector collector.IMetricsCollector
+	sender           senderp.ISender
 	pollInterval     int
 	reportInterval   int
 	pollCount        int64
@@ -27,7 +33,9 @@ type agent struct {
 	metrics          map[string]interface{}
 }
 
-func NewAgent(pollInterval int, reportInterval int, rateLimit int, metricsCollector collector.MetricsCollector, sender sender2.Sender) Agent {
+// NewAgent создает новый агент с заданными параметрами для интервалов, лимита и сборщика/отправителя метрик.
+func NewAgent(pollInterval int, reportInterval int, rateLimit int,
+	metricsCollector collector.IMetricsCollector, sender senderp.ISender) Agent {
 	return &agent{metricsCollector, sender, pollInterval, reportInterval, 0, rateLimit, sync.Mutex{}, make(map[string]interface{})}
 }
 
