@@ -134,8 +134,9 @@ func (s *sender) SendJSON(metricName string, metricValI interface{}) error {
 	}
 
 	// Хеш в заголовке
+	var hash string
 	if len(s.hashKey) > 0 {
-		hash, err := s.generateHash(jsonData)
+		hash, err = s.generateHash(jsonData)
 		if err != nil {
 			return fmt.Errorf("failed to generate hash: %w", err)
 		}
@@ -208,8 +209,9 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 	}
 
 	// Хеш в заголовке
+	var hash string
 	if len(s.hashKey) > 0 {
-		hash, err := s.generateHash(jsonData)
+		hash, err = s.generateHash(jsonData)
 		if err != nil {
 			return fmt.Errorf("failed to generate hash: %w", err)
 		}
