@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"github.com/llaxzi/retryables/v2"
 	"net/http"
+
+	"github.com/llaxzi/retryables/v2"
 
 	"github.com/gin-gonic/gin"
 

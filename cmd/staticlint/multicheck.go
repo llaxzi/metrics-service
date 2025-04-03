@@ -47,6 +47,8 @@
 package main
 
 import (
+	"metrics-service/cmd/staticlint/analyzer"
+
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/multichecker"
 	"golang.org/x/tools/go/analysis/passes/assign"
@@ -57,7 +59,6 @@ import (
 	"golang.org/x/tools/go/analysis/passes/structtag"
 	"golang.org/x/tools/go/analysis/passes/unreachable"
 	"honnef.co/go/tools/staticcheck"
-	"metrics-service/cmd/staticlint/analyzer"
 )
 
 func main() {
