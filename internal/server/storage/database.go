@@ -5,19 +5,22 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
 	"log"
-	apperrors "metrics-service/internal/server/errors"
-	"metrics-service/internal/server/models"
 	"strconv"
 	"time"
+
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
+
+	apperrors "metrics-service/internal/server/errors"
+	"metrics-service/internal/server/models"
 )
 
 const (
 	timeout = 1
 )
 
+// repository реализует Storage в виде соединения с базой данных Postgres
 type repository struct {
 	db *sql.DB
 }

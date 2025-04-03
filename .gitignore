@@ -26,4 +26,5 @@ vendor/
 
 metrics.json
 metricstest.txt
+pprof.txt
 TestSender_SendBatch.txt

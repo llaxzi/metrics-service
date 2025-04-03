@@ -3,15 +3,18 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/gin-gonic/gin"
+	"github.com/llaxzi/retryables/v2"
 	"log"
+	"syscall"
+	"time"
+
+	"github.com/gin-contrib/pprof"
+	"github.com/gin-gonic/gin"
+
 	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/middleware"
-	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
-	"syscall"
-	"time"
 )
 
 func main() {
@@ -32,7 +35,7 @@ func main() {
 		log.Fatalf("Failed to initialize storage: %v", err)
 	}
 
-	storageRetryer := retry.NewRetryer()
+	storageRetryer := retryables.NewRetryer(nil)
 	storageRetryer.SetConditionFunc(func(err error) bool {
 		return errors.Is(err, apperrors.ErrPgConnExc) || errors.Is(err, syscall.EBUSY)
 	})
@@ -86,9 +89,10 @@ func main() {
 	gzipGroup.POST("/value/", metricsHandler.GetJSON)
 	gzipGroup.POST("/updates/", metricsHandler.UpdateBatch)
 
+	pprof.Register(server, "dev/pprof")
+
 	err = server.Run(flagRunAddr)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-
 }

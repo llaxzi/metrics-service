@@ -1,3 +1,4 @@
+// Package apperrors содержит кастомные ошибки приложения
 package apperrors
 
 import "errors"
@@ -12,16 +13,3 @@ var (
 	ErrHashHeaderMissing = errors.New("HashSHA256 header is missing")
 	ErrHashHeaderInvalid = errors.New("invalid hash")
 )
-
-func IsAppError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	return errors.Is(err, ErrWrongMetricValue) ||
-		errors.Is(err, ErrInvalidMetricType) ||
-		errors.Is(err, ErrMetricNotExist) ||
-		errors.Is(err, ErrServer) ||
-		errors.Is(err, ErrPgConnExc) ||
-		errors.Is(err, ErrPingMemory)
-}

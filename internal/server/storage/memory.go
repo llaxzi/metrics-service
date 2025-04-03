@@ -3,10 +3,11 @@ package storage
 import (
 	"context"
 	"fmt"
-	apperrors "metrics-service/internal/server/errors"
-	"metrics-service/internal/server/models"
 	"strconv"
 	"sync"
+
+	apperrors "metrics-service/internal/server/errors"
+	"metrics-service/internal/server/models"
 )
 
 /*
@@ -15,7 +16,7 @@ gauge - метрика текущего состояния системы. Но�
 counter - метрика-счетчик событий (кол-во запросов и ошибок). Новое значение добавляется к существующему
 */
 
-// Хранилище
+// metricsStorage реализует Storage в виде inline-memory хранилища
 type metricsStorage struct {
 	muGauge   sync.RWMutex
 	muCounter sync.RWMutex

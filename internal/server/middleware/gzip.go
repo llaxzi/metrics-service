@@ -2,25 +2,30 @@ package middleware
 
 import (
 	"compress/gzip"
-	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/gin-gonic/gin"
 )
 
+// newGzipWriter создает новый gzipWriter, оборачивающий gin.ResponseWriter.
 func newGzipWriter(w gin.ResponseWriter) *gzipWriter {
 	return &gzipWriter{w, gzip.NewWriter(w)}
 }
 
+// gzipWriter оборачивает gin.ResponseWriter и выполняет сжатие данных перед отправкой клиенту.
 type gzipWriter struct {
 	gin.ResponseWriter
 	gzWriter *gzip.Writer
 }
 
+// Write выполняет сжатие данных перед их записью в ResponseWriter.
 func (w *gzipWriter) Write(b []byte) (int, error) {
 	return w.gzWriter.Write(b)
 }
 
+// newGzipReader создает новый gzipReader для разжатия тела запроса.
 func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	zr, err := gzip.NewReader(r)
 	if err != nil {
@@ -29,15 +34,18 @@ func newGzipReader(r io.ReadCloser) (*gzipReader, error) {
 	return &gzipReader{r, zr}, nil
 }
 
+// gzipReader оборачивает io.ReadCloser и выполняет разжатие входных данных.
 type gzipReader struct {
 	r  io.ReadCloser
 	zr *gzip.Reader
 }
 
+// Read считывает разжатые данные.
 func (g *gzipReader) Read(p []byte) (n int, err error) {
 	return g.zr.Read(p)
 }
 
+// Close закрывает gzipReader и исходный поток данных.
 func (g *gzipReader) Close() error {
 	if err := g.zr.Close(); err != nil {
 		return err
@@ -45,7 +53,14 @@ func (g *gzipReader) Close() error {
 	return g.r.Close()
 }
 
-func (m *middleware) WithGzip() gin.HandlerFunc {
+// WithGzip добавляет middleware для сжатия и декомпрессии данных с помощью gzip.
+//
+// Если клиент поддерживает gzip (заголовок "Accept-Encoding" содержит "gzip"),
+// то ответы сервера будут сжиматься перед отправкой.
+//
+// Если запрос от клиента сжат с использованием gzip (заголовок "Content-Encoding" содержит "gzip"),
+// то middleware разожмет тело запроса перед его обработкой.
+func (m *Middleware) WithGzip() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 
 		acceptGzip := strings.Contains(ctx.Request.Header.Get("Accept-Encoding"), "gzip")

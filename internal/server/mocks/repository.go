@@ -5,8 +5,9 @@
 package mocks
 
 import (
-	models "metrics-service/internal/server/models"
 	reflect "reflect"
+
+	models "metrics-service/internal/server/models"
 
 	gomock "github.com/golang/mock/gomock"
 )

@@ -1,3 +1,4 @@
+// Package middleware содержит интерфейс middleware и его реализацию.
 package middleware
 
 import (
@@ -5,17 +6,20 @@ import (
 	"go.uber.org/zap"
 )
 
-type Middleware interface {
+// IMiddleware определяет интерфейс для middleware сервиса.
+type IMiddleware interface {
 	WithLogging() gin.HandlerFunc
 	InitializeZap(level string) error
 	WithGzip() gin.HandlerFunc
 }
 
-type middleware struct {
+// Middleware реализует интерфейс  IMiddleware.
+type Middleware struct {
 	Log     *zap.Logger // Log Синглтон.
 	hashKey []byte
 }
 
-func NewMiddleware(hashKey []byte) Middleware {
-	return &middleware{zap.NewNop(), hashKey}
+// NewMiddleware создает новый экземпляр IMiddleware
+func NewMiddleware(hashKey []byte) IMiddleware {
+	return &Middleware{zap.NewNop(), hashKey}
 }

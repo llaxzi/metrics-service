@@ -5,18 +5,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/llaxzi/retryables/v2"
+	"html/template"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"html/template"
+
 	"metrics-service/internal/server/mocks"
 	"metrics-service/internal/server/models"
-	"metrics-service/internal/server/retry"
 	"metrics-service/internal/server/storage"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestMetricsHandler_Update(t *testing.T) {
@@ -54,7 +57,7 @@ func TestMetricsHandler_Update(t *testing.T) {
 		router := gin.Default()
 
 		memoryStorage, _ := storage.NewStorage("", "", false, 300)
-		retryer := retry.NewRetryer()
+		retryer := retryables.NewRetryer(nil)
 		retryer.SetCount(1)
 
 		metricsH := NewMetricsHandler(memoryStorage, retryer, false)
@@ -105,7 +108,7 @@ func TestMetricsHandler_Get(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 			test.storageSet(memoryStorage)
 
@@ -165,7 +168,7 @@ func TestHtmlHandler_Get(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 			test.storageSet(memoryStorage)
 
@@ -251,7 +254,7 @@ func TestMetricsHandler_UpdateJSON(t *testing.T) {
 			router := gin.Default()
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 
 			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
@@ -302,7 +305,7 @@ func TestMetricsHandler_GetJSON(t *testing.T) {
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 			test.setup(memoryStorage)
 
@@ -360,7 +363,7 @@ func TestMetricsHandler_Ping(t *testing.T) {
 				storage.EXPECT().Ping(gomock.Any()).Return(errors.New("server error"))
 			}
 
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 
 			metricsH := NewMetricsHandler(storage, retryer, false)
@@ -403,7 +406,7 @@ func TestMetricsHandler_UpdateBatch(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			memoryStorage, _ := storage.NewStorage("", "", false, 300)
-			retryer := retry.NewRetryer()
+			retryer := retryables.NewRetryer(nil)
 			retryer.SetCount(1)
 
 			metricsH := NewMetricsHandler(memoryStorage, retryer, false)
@@ -423,4 +426,170 @@ func int64Ptr(i int64) *int64 {
 
 func float64Ptr(f float64) *float64 {
 	return &f
+}
+
+//
+
+func ExampleMetricsHandler_Update() {
+
+	// Настраиваем тестовое окружение
+	r := gin.Default()
+	memoryStorage, _ := storage.NewStorage("", "", false, 300)
+	retryer := retryables.NewRetryer(nil)
+	retryer.SetCount(1)
+	h := NewMetricsHandler(memoryStorage, retryer, false)
+	r.PUT("/update/:metricType/:metricName/:metricVal", h.Update)
+
+	// Выполняем запрос к эндпоинту
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("PUT", "/update/gauge/cpu/75.5", nil)
+	r.ServeHTTP(w, req)
+
+	fmt.Println(w.Code, w.Body.String())
+	// Output:
+	// 200 updated successfully
+
+}
+
+func ExampleMetricsHandler_Get() {
+
+	// Настраиваем тестовое окружение
+	r := gin.Default()
+	memoryStorage, _ := storage.NewStorage("", "", false, 300)
+	retryer := retryables.NewRetryer(nil)
+	retryer.SetCount(1)
+	h := NewMetricsHandler(memoryStorage, retryer, false)
+	r.GET("/value/:metricType/:metricName", h.Get)
+
+	// Выполняем запрос к эндпоинту
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/value/gauge/cpu", nil)
+	r.ServeHTTP(w, req)
+
+	fmt.Println(w.Code)
+	// Output:
+	// 404
+
+}
+
+func ExampleMetricsHandler_UpdateJSON() {
+
+	// Настраиваем тестовое окружение
+	r := gin.Default()
+	memoryStorage, _ := storage.NewStorage("", "", false, 300)
+	retryer := retryables.NewRetryer(nil)
+	retryer.SetCount(1)
+	h := NewMetricsHandler(memoryStorage, retryer, false)
+	r.POST("/update", h.UpdateJSON)
+
+	// Выполняем запрос к эндпоинту
+	metric := models.Metrics{MType: "gauge", Value: new(float64)}
+	*metric.Value = 90.5
+	jsonData, _ := json.Marshal(metric)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/update", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	fmt.Println(w.Code)
+	// Output:
+	// 200
+
+}
+
+func ExampleMetricsHandler_GetJSON() {
+
+	// Настраиваем тестовое окружение
+	r := gin.Default()
+	memoryStorage, _ := storage.NewStorage("", "", false, 300)
+	retryer := retryables.NewRetryer(nil)
+	retryer.SetCount(1)
+	h := NewMetricsHandler(memoryStorage, retryer, false)
+	r.POST("/value", h.GetJSON)
+
+	// Выполняем запрос к эндпоинту
+	metric := models.Metrics{MType: "gauge", Value: new(float64)}
+	*metric.Value = 90.5
+	jsonData, _ := json.Marshal(metric)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/value", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	fmt.Println(w.Code)
+	// Output:
+	// 404
+
+}
+
+func ExampleMetricsHandler_Ping() {
+
+	// Настраиваем тестовое окружение
+	r := gin.Default()
+	// Будем пинговать memoryStorage - получим 500
+	memoryStorage, _ := storage.NewStorage("", "", false, 300)
+	retryer := retryables.NewRetryer(nil)
+	retryer.SetCount(1)
+	h := NewMetricsHandler(memoryStorage, retryer, false)
+	r.GET("/ping", h.Ping)
+
+	// Выполняем запрос к эндпоинту
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/ping", nil)
+	r.ServeHTTP(w, req)
+
+	fmt.Println(w.Code)
+	// Output:
+	// 500
+}
+
+func ExampleMetricsHandler_UpdateBatch() {
+
+	// Настраиваем тестовое окружение
+	r := gin.Default()
+	memoryStorage, _ := storage.NewStorage("", "", false, 300)
+	retryer := retryables.NewRetryer(nil)
+	retryer.SetCount(1)
+	h := NewMetricsHandler(memoryStorage, retryer, false)
+	r.POST("/updates", h.UpdateBatch)
+
+	// Выполняем запрос к эндпоинту
+	metrics := []models.Metrics{
+		{MType: "counter", Delta: int64Ptr(10)},
+		{MType: "gauge", Value: float64Ptr(20.5)},
+	}
+
+	jsonData, _ := json.Marshal(metrics)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/updates", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+
+	fmt.Println(w.Code)
+	// Output:
+	// 200
+
+}
+
+func ExampleHTMLHandler_Get() {
+
+	// Настраиваем тестовое окружение
+	r := gin.Default()
+	memoryStorage, _ := storage.NewStorage("", "", false, 300)
+	retryer := retryables.NewRetryer(nil)
+	retryer.SetCount(1)
+	h := NewHTMLHandler(memoryStorage, retryer)
+	r.GET("/", h.Get)
+
+	// Выполняем запрос к эндпоинту
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/", nil)
+	r.ServeHTTP(w, req)
+
+	fmt.Println(w.Code)
+	// Output:
+	// 200
 }

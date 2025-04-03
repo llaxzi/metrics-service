@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"metrics-service/internal/agent"
-	"metrics-service/internal/agent/collector"
-	"metrics-service/internal/agent/sender"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"metrics-service/internal/agent"
+	"metrics-service/internal/agent/collector"
+	"metrics-service/internal/agent/sender"
 )
 
 func main() {

@@ -1,3 +1,5 @@
+// Package sender предоставляет функциональность для отправки метрик на сервер.
+// Поддерживает отправку метрик в формате JSON, а также пакетную отправку метрик и их сжатие.
 package sender
 
 import (
@@ -8,25 +10,32 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/go-resty/resty/v2"
-	"metrics-service/internal/server/models"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/go-resty/resty/v2"
+
+	"metrics-service/internal/server/models"
 )
 
-type Sender interface {
+// ISender представляет интерфейс для отправки метрик на сервер.
+type ISender interface {
+	// SendJSON отправляет одну метрику в формате JSON.
 	SendJSON(metricName string, metricValI interface{}) error
+	// SendBatch отправляет несколько метрик за один запрос.
 	SendBatch(metricsMap map[string]interface{}) error
 }
 
+// sender реализует интерфейс Sender.
 type sender struct {
 	client  *resty.Client
 	baseURL string
 	hashKey []byte
 }
 
-func NewSender(baseURL string, hashKey []byte) Sender {
+// NewSender создает новый экземпляр sender с заданным базовым URL и ключом для хеширования.
+func NewSender(baseURL string, hashKey []byte) ISender {
 	client := resty.New()
 	// Настройка retry
 	client.SetRetryCount(3)
@@ -52,6 +61,7 @@ func NewSender(baseURL string, hashKey []byte) Sender {
 	return &sender{client, baseURL, hashKey}
 }
 
+// Send отправляет метрики на сервер. Каждая метрика может быть типа "counter" или "gauge".
 func (s *sender) Send(metricsMap map[string]interface{}) error {
 	for metricName, metricVal := range metricsMap {
 
@@ -93,6 +103,7 @@ func (s *sender) Send(metricsMap map[string]interface{}) error {
 	return nil
 }
 
+// SendJSON отправляет метрику в формате JSON.
 func (s *sender) SendJSON(metricName string, metricValI interface{}) error {
 
 	var body models.Metrics
@@ -161,6 +172,7 @@ func (s *sender) SendJSON(metricName string, metricValI interface{}) error {
 	return nil
 }
 
+// SendBatch отправляет несколько метрик за один запрос.
 func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 	if len(metricsMap) < 1 {
 		return nil

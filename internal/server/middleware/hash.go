@@ -5,23 +5,32 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/gin-gonic/gin"
 	"io"
-	apperrors "metrics-service/internal/server/errors"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
+
+	apperrors "metrics-service/internal/server/errors"
 )
 
+// responseWriter перехватывает тело ответа для последующего вычисления HMAC-хэша.
 type responseWriter struct {
 	gin.ResponseWriter
 	body []byte
 }
 
+// Write сохраняет записываемые данные в body и передает их в оригинальный ResponseWriter.
 func (rw *responseWriter) Write(p []byte) (n int, err error) {
 	rw.body = append(rw.body, p...)
 	return rw.ResponseWriter.Write(p)
 }
 
-func (m *middleware) WithHMAC() gin.HandlerFunc {
+// WithHMAC добавляет middleware для проверки HMAC-хэша запросов и формирования HMAC-хэша ответов.
+//
+// Если заголовок "HashSHA256" отсутствует, возвращается ошибка 400 (Bad Request).
+// Тело запроса проверяется на соответствие переданному хэшу. Если хэш не совпадает, запрос отклоняется.
+// После обработки запроса вычисляется HMAC-хэш ответа, и он добавляется в заголовок "HashSHA256".
+func (m *Middleware) WithHMAC() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if len(m.hashKey) < 1 {
 			ctx.Next()
@@ -74,7 +83,7 @@ func (m *middleware) WithHMAC() gin.HandlerFunc {
 	}
 }
 
-func (m *middleware) generateHash(src []byte) (string, error) {
+func (m *Middleware) generateHash(src []byte) (string, error) {
 	h := hmac.New(sha256.New, m.hashKey)
 	_, err := h.Write(src)
 	if err != nil {
