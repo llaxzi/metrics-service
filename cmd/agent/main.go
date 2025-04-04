@@ -13,6 +13,8 @@ import (
 
 func main() {
 
+	printBuildInfo()
+
 	// Получаем config (flags или env)
 	parseFlags()
 

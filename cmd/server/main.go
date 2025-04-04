@@ -20,6 +20,8 @@ import (
 
 func main() {
 
+	printBuildInfo()
+
 	// Обрабатываем аргументы командной строки
 	parseFlags()
 
