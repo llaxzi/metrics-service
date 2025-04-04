@@ -2,18 +2,26 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 )
 
-var serverHost string
-var reportInterval int
-var pollInterval int
+var (
+	serverHost     string
+	reportInterval int
+	pollInterval   int
 
-var flagHashKey string
+	flagHashKey string
 
-var flagRateLimit int
-var flagReportBatch bool
+	flagRateLimit   int
+	flagReportBatch bool
+
+	// Флаги линковщика
+	buildVersion string
+	buildDate    string
+	buildCommit  string
+)
 
 func parseFlags() {
 	flag.StringVar(&serverHost, "a", "localhost:8080", "endpoint address")
@@ -60,4 +68,22 @@ func parseFlags() {
 		}
 	}
 
+}
+
+func printBuildInfo() {
+
+	buildVersion = filterFlag(buildVersion)
+	buildDate = filterFlag(buildDate)
+	buildCommit = filterFlag(buildCommit)
+
+	fmt.Printf("Build version: %s\n", buildVersion)
+	fmt.Printf("Build date: %v\n", buildDate)
+	fmt.Printf("Build commit: %s\n", buildCommit)
+}
+
+func filterFlag(flag string) string {
+	if flag == "" {
+		return "N/A"
+	}
+	return flag
 }

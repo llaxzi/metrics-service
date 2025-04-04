@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/llaxzi/retryables/v2"
 	"log"
 	"syscall"
 	"time"
+
+	"github.com/llaxzi/retryables/v2"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -18,6 +19,8 @@ import (
 )
 
 func main() {
+
+	printBuildInfo()
 
 	// Обрабатываем аргументы командной строки
 	parseFlags()

@@ -6,11 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/llaxzi/retryables/v2"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/llaxzi/retryables/v2"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang/mock/gomock"
