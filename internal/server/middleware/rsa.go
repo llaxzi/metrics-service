@@ -16,6 +16,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// WithDecryptRSA добавляет middleware, которое расшифровывает тело входящего запроса,
+// если заголовок "Content-Encoding" содержит "encrypted".
+// Предполагается, что данные зашифрованы с использованием RSA-OAEP по чанкам.
+// После расшифровки тело запроса заменяется на расшифрованные данные,
+// и заголовок "Content-Encoding" устанавливается в "gzip" для дальнейшей обработки.
+//
+// Данный middleware должен использоваться перед middleware WithGzip.
 func (m *Middleware) WithDecryptRSA() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		if ctx.Request.Header.Get("Content-Encoding") != "encrypted" {

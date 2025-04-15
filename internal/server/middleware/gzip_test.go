@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -13,9 +14,16 @@ import (
 )
 
 func TestMiddleware_WithGzip(t *testing.T) {
-	r := gin.Default()
-	m := NewMiddleware([]byte(""))
 
+	keyPath := "test_private.pem"
+	err := generateTestPrivateKeyPKCS8(keyPath)
+	assert.NoError(t, err)
+	defer os.Remove(keyPath)
+
+	m, err := NewMiddleware([]byte(""), keyPath)
+	assert.NoError(t, err)
+
+	r := gin.Default()
 	r.Use(m.WithGzip())
 
 	// Эндпоинт для теста сжатия
