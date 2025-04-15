@@ -3,15 +3,24 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/assert"
 )
 
 func BenchmarkWithLogging(b *testing.B) {
 	gin.SetMode(gin.TestMode)
 
-	m := NewMiddleware([]byte("some-secret"))
+	keyPath := "test_private.pem"
+	err := generateTestPrivateKeyPKCS8(keyPath)
+	assert.NoError(b, err)
+	defer os.Remove(keyPath)
+
+	m, err := NewMiddleware([]byte(""), keyPath)
+	assert.NoError(b, err)
+
 	_ = m.InitializeZap("debug")
 
 	loggingMiddleware := m.WithLogging()

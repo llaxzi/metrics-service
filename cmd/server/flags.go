@@ -23,6 +23,8 @@ var (
 	buildVersion string
 	buildDate    string
 	buildCommit  string
+
+	cryptoKeyPath string
 )
 
 func parseFlags() {
@@ -36,6 +38,8 @@ func parseFlags() {
 	flag.StringVar(&flagDatabaseDSN, "d", "", "database DSN")
 
 	flag.StringVar(&flagHashKey, "k", "", "hash key")
+
+	flag.StringVar(&cryptoKeyPath, "crypto-key", "", "path to private rsa crypto key")
 
 	flag.Parse()
 
@@ -65,6 +69,9 @@ func parseFlags() {
 	}
 	if envHashKey := os.Getenv("KEY"); envHashKey != "" {
 		flagHashKey = envHashKey
+	}
+	if envCryptoKeyPath := os.Getenv("CRYPTO_KEY"); envCryptoKeyPath != "" {
+		cryptoKeyPath = envCryptoKeyPath
 	}
 }
 

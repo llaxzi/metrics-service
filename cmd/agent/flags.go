@@ -21,6 +21,8 @@ var (
 	buildVersion string
 	buildDate    string
 	buildCommit  string
+
+	cryptoKeyPath string
 )
 
 func parseFlags() {
@@ -30,6 +32,7 @@ func parseFlags() {
 	flag.StringVar(&flagHashKey, "k", "", "hash key")
 	flag.IntVar(&flagRateLimit, "l", 0, "http requests rate limit")
 	flag.BoolVar(&flagReportBatch, "b", true, "determinate batch reporting")
+	flag.StringVar(&cryptoKeyPath, "crypto-key", "", "path to public rsa crypto key")
 	flag.Parse()
 
 	if envServerHost := os.Getenv("ADDRESS"); envServerHost != "" {
@@ -66,6 +69,10 @@ func parseFlags() {
 		if err == nil {
 			flagReportBatch = val
 		}
+	}
+
+	if envCryptoKeyPath := os.Getenv("CRYPTO_KEY"); envCryptoKeyPath != "" {
+		cryptoKeyPath = envCryptoKeyPath
 	}
 
 }
