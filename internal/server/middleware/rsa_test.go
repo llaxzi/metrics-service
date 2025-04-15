@@ -34,7 +34,7 @@ func TestDecryptOAEPChunks(t *testing.T) {
 	// 3. Подготовка данных и шифрование по чанкам
 	originalData := bytes.Repeat([]byte("X"), 512) // данные длиной > 1 чанка
 	hash := sha256.New()
-	maxChunkSize := privKey.PublicKey.Size() - 2*hash.Size() - 2
+	maxChunkSize := privKey.Size() - 2*hash.Size() - 2
 
 	var encrypted []byte
 	for start := 0; start < len(originalData); start += maxChunkSize {

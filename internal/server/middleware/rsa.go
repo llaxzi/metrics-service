@@ -73,7 +73,7 @@ func (m *Middleware) loadPrivateKey() error {
 
 func decryptOAEPChunks(data []byte, privateKey *rsa.PrivateKey) ([]byte, error) {
 	hash := sha256.New()
-	keySize := privateKey.PublicKey.Size()
+	keySize := privateKey.Size()
 
 	var decrypted []byte
 	for start := 0; start < len(data); start += keySize {
