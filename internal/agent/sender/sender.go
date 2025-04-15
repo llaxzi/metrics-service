@@ -6,11 +6,17 @@ import (
 	"bytes"
 	"compress/gzip"
 	"crypto/hmac"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
+	"encoding/pem"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -29,13 +35,15 @@ type ISender interface {
 
 // sender реализует интерфейс Sender.
 type sender struct {
-	client  *resty.Client
-	baseURL string
-	hashKey []byte
+	client        *resty.Client
+	baseURL       string
+	hashKey       []byte
+	cryptoKeyPath string
+	publicKey     *rsa.PublicKey
 }
 
 // NewSender создает новый экземпляр sender с заданным базовым URL и ключом для хеширования.
-func NewSender(baseURL string, hashKey []byte) ISender {
+func NewSender(baseURL string, hashKey []byte, cryptoKeyPath string) (ISender, error) {
 	client := resty.New()
 	// Настройка retry
 	client.SetRetryCount(3)
@@ -58,7 +66,20 @@ func NewSender(baseURL string, hashKey []byte) ISender {
 		}
 		return false
 	}) // retry только в случае, если сервер недоступен (maintenance или перегрузка) или внут. ошибка
-	return &sender{client, baseURL, hashKey}
+
+	s := &sender{
+		client:        client,
+		baseURL:       baseURL,
+		hashKey:       hashKey,
+		cryptoKeyPath: cryptoKeyPath,
+	}
+
+	if err := s.loadPublicKey(); err != nil {
+		return nil, fmt.Errorf("failed to load public key: %w", err)
+	}
+
+	return s, nil
+
 }
 
 // Send отправляет метрики на сервер. Каждая метрика может быть типа "counter" или "gauge".
@@ -229,12 +250,18 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 		return fmt.Errorf("failed to close gzip writer: %w", err)
 	}
 
+	// шифруем gzip-данные
+	encryptedData, err := s.encryptOAEPChunks(buf.Bytes())
+	if err != nil {
+		return fmt.Errorf("failed to encrypt data chunks: %w", err)
+	}
+
 	url := s.baseURL + "/updates"
 
-	s.client.SetHeader("Content-type", "application/json")
-	s.client.SetHeader("Content-Encoding", "gzip")
+	s.client.SetHeader("Content-type", "application/octet-stream")
+	s.client.SetHeader("Content-Encoding", "encrypted")
 
-	resp, err := s.client.R().SetBody(buf.Bytes()).Post(url)
+	resp, err := s.client.R().SetBody(encryptedData).Post(url)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
@@ -252,4 +279,52 @@ func (s *sender) generateHash(src []byte) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func (s *sender) loadPublicKey() error {
+	keyData, err := os.ReadFile(s.cryptoKeyPath)
+	if err != nil {
+		return err
+	}
+	block, _ := pem.Decode(keyData)
+	if block == nil {
+		return errors.New("failed to decode PEM block")
+	}
+
+	pubKeyInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return err
+	}
+
+	pubKey, ok := pubKeyInterface.(*rsa.PublicKey)
+	if !ok {
+		return errors.New("not RSA public key")
+	}
+
+	s.publicKey = pubKey
+	return nil
+}
+
+func (s *sender) encryptOAEPChunks(data []byte) ([]byte, error) {
+	hash := sha256.New()
+	keySize := s.publicKey.Size()
+	maxChunkSize := keySize - 2*hash.Size() - 2 // RSA-OAEP ограничение
+
+	var encrypted []byte
+	for start := 0; start < len(data); start += maxChunkSize {
+		end := start + maxChunkSize
+		if end > len(data) {
+			end = len(data)
+		}
+
+		chunk := data[start:end]
+		encChunk, err := rsa.EncryptOAEP(hash, rand.Reader, s.publicKey, chunk, nil)
+		if err != nil {
+			return nil, fmt.Errorf("chunk encryption failed: %w", err)
+		}
+
+		encrypted = append(encrypted, encChunk...)
+	}
+
+	return encrypted, nil
 }

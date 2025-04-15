@@ -15,7 +15,7 @@ import (
 	apperrors "metrics-service/internal/server/errors"
 	"metrics-service/internal/server/handler"
 	"metrics-service/internal/server/middleware"
-	"metrics-service/internal/server/storage"
+	storageP "metrics-service/internal/server/storage"
 )
 
 func main() {
@@ -26,14 +26,18 @@ func main() {
 	parseFlags()
 
 	// Создаем middleware (логгер, gzip)
-	mid := middleware.NewMiddleware([]byte(flagHashKey))
-	err := mid.InitializeZap(flagLogLevel)
+	mid, err := middleware.NewMiddleware([]byte(flagHashKey), cryptoKeyPath)
+	if err != nil {
+		log.Fatalf("Failed to initialize middleware: %v", err)
+	}
+
+	err = mid.InitializeZap(flagLogLevel)
 	if err != nil {
 		log.Fatalf("Failed to initialize middleware: %v", err)
 	}
 
 	// Создаем storage
-	storage, err := storage.NewStorage(flagDatabaseDSN, flagFileStoragePath, flagRestore, flagStoreInterval)
+	storage, err := storageP.NewStorage(flagDatabaseDSN, flagFileStoragePath, flagRestore, flagStoreInterval)
 	if err != nil {
 		log.Fatalf("Failed to initialize storage: %v", err)
 	}
@@ -84,7 +88,7 @@ func main() {
 
 	// Группа для методов с gzip
 	gzipGroup := server.Group("")
-	gzipGroup.Use(mid.WithGzip())
+	gzipGroup.Use(mid.WithDecryptRSA(), mid.WithGzip())
 
 	gzipGroup.GET("/", htmlHandler.Get)
 

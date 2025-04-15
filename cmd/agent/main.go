@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -22,7 +23,10 @@ func main() {
 	metricsCollector := collector.NewMetricsCollector()
 
 	baseURL := "http://" + serverHost
-	metricsSender := sender.NewSender(baseURL, []byte(flagHashKey))
+	metricsSender, err := sender.NewSender(baseURL, []byte(flagHashKey), cryptoKeyPath)
+	if err != nil {
+		log.Fatalf("Failed to init sender: %v", err)
+	}
 
 	// Создаем агент
 	a := agent.NewAgent(pollInterval, reportInterval, flagRateLimit, metricsCollector, metricsSender)
