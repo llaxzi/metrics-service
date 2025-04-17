@@ -16,8 +16,10 @@ func main() {
 
 	printBuildInfo()
 
-	// Получаем config (flags или env)
+	// Получаем config (flags или env или json)
 	parseFlags()
+	parseJSON()
+	overrideEnv()
 
 	// Создаем интерфейсы
 	metricsCollector := collector.NewMetricsCollector()

@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var (
@@ -23,9 +26,12 @@ var (
 	buildCommit  string
 
 	cryptoKeyPath string
+
+	configPath string
 )
 
 func parseFlags() {
+	flag.StringVar(&configPath, "c", "", "json config path")
 	flag.StringVar(&serverHost, "a", "localhost:8080", "endpoint address")
 	flag.IntVar(&reportInterval, "r", 10, "report interval")
 	flag.IntVar(&pollInterval, "p", 2, "poll interval")
@@ -34,7 +40,54 @@ func parseFlags() {
 	flag.BoolVar(&flagReportBatch, "b", true, "determinate batch reporting")
 	flag.StringVar(&cryptoKeyPath, "crypto-key", "", "path to public rsa crypto key")
 	flag.Parse()
+}
 
+type Config struct {
+	Address        string `json:"address"`
+	ReportInterval string `json:"report_interval"`
+	PollInterval   string `json:"poll_interval"`
+	CryptoKey      string `json:"crypto_key"`
+}
+
+func parseJSON() {
+	if configPath == "" {
+		return
+	}
+
+	bts, err := os.ReadFile(configPath)
+	if err != nil {
+		log.Fatalf("Failed to read json config: %v", err)
+	}
+
+	var cfg Config
+	if err = json.Unmarshal(bts, &cfg); err != nil {
+		log.Fatalf("Failed to unmarshal json config: %v", err)
+	}
+
+	if serverHost == "" {
+		serverHost = cfg.Address
+	}
+	if cryptoKeyPath == "" {
+		cryptoKeyPath = cfg.CryptoKey
+	}
+
+	if reportInterval == 10 && cfg.ReportInterval != "" {
+		rp, err := strconv.Atoi(strings.TrimSuffix(cfg.ReportInterval, "s"))
+		if err != nil {
+			log.Fatalf("Failed to convert store_interval: %v", err)
+		}
+		reportInterval = rp
+	}
+	if pollInterval == 2 && cfg.PollInterval != "" {
+		st, err := strconv.Atoi(strings.TrimSuffix(cfg.PollInterval, "s"))
+		if err != nil {
+			log.Fatalf("Failed to convert store_interval: %v", err)
+		}
+		pollInterval = st
+	}
+}
+
+func overrideEnv() {
 	if envServerHost := os.Getenv("ADDRESS"); envServerHost != "" {
 		serverHost = envServerHost
 	}
@@ -74,7 +127,6 @@ func parseFlags() {
 	if envCryptoKeyPath := os.Getenv("CRYPTO_KEY"); envCryptoKeyPath != "" {
 		cryptoKeyPath = envCryptoKeyPath
 	}
-
 }
 
 func printBuildInfo() {

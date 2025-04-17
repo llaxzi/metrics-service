@@ -251,17 +251,24 @@ func (s *sender) SendBatch(metricsMap map[string]interface{}) error {
 	}
 
 	// шифруем gzip-данные
-	encryptedData, err := s.encryptOAEPChunks(buf.Bytes())
-	if err != nil {
-		return fmt.Errorf("failed to encrypt data chunks: %w", err)
+	var data []byte
+
+	if s.publicKey == nil {
+		data = buf.Bytes()
+		s.client.SetHeader("Content-Encoding", "gzip")
+	} else {
+		encryptedData, err := s.encryptOAEPChunks(buf.Bytes())
+		if err != nil {
+			return fmt.Errorf("failed to encrypt data chunks: %w", err)
+		}
+		data = encryptedData
+		s.client.SetHeader("Content-type", "application/octet-stream")
+		s.client.SetHeader("Content-Encoding", "encrypted")
 	}
 
 	url := s.baseURL + "/updates"
 
-	s.client.SetHeader("Content-type", "application/octet-stream")
-	s.client.SetHeader("Content-Encoding", "encrypted")
-
-	resp, err := s.client.R().SetBody(encryptedData).Post(url)
+	resp, err := s.client.R().SetBody(data).Post(url)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
@@ -282,6 +289,12 @@ func (s *sender) generateHash(src []byte) (string, error) {
 }
 
 func (s *sender) loadPublicKey() error {
+
+	if s.cryptoKeyPath == "" {
+		s.publicKey = nil
+		return nil
+	}
+
 	keyData, err := os.ReadFile(s.cryptoKeyPath)
 	if err != nil {
 		return err

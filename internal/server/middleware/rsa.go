@@ -30,6 +30,13 @@ func (m *Middleware) WithDecryptRSA() gin.HandlerFunc {
 			return
 		}
 
+		if m.privateKey == nil {
+			ctx.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": "server does not accept encrypted requests",
+			})
+			return
+		}
+
 		encryptedData, err := io.ReadAll(ctx.Request.Body)
 		if err != nil {
 			ctx.AbortWithStatus(http.StatusBadRequest)
@@ -49,9 +56,15 @@ func (m *Middleware) WithDecryptRSA() gin.HandlerFunc {
 }
 
 func (m *Middleware) loadPrivateKey() error {
+
+	if m.cryptoKeyPath == "" {
+		m.privateKey = nil
+		return nil
+	}
+
 	keyData, err := os.ReadFile(m.cryptoKeyPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to read file \"%s\": %v", m.cryptoKeyPath, err)
 	}
 	block, _ := pem.Decode(keyData)
 	if block == nil {

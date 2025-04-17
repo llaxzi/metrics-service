@@ -22,8 +22,9 @@ func main() {
 
 	printBuildInfo()
 
-	// Обрабатываем аргументы командной строки
 	parseFlags()
+	parseJSON()
+	overrideEnv()
 
 	// Создаем middleware (логгер, gzip)
 	mid, err := middleware.NewMiddleware([]byte(flagHashKey), cryptoKeyPath)
