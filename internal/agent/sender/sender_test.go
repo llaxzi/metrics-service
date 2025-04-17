@@ -1,18 +1,26 @@
 package sender
 
 import (
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSender_Send(t *testing.T) {
+	// Фиктивный публичный ключ для теста
+	pubKeyFile := "test_public.pem"
+	err := generateTestPublicKey(pubKeyFile)
+	assert.NoError(t, err)
+	defer os.Remove(pubKeyFile)
+
 	testTable := []struct {
 		name       string
 		metricsMap map[string]interface{}
@@ -20,13 +28,13 @@ func TestSender_Send(t *testing.T) {
 		wantErr    bool
 	}{
 		{"OK", map[string]interface{}{
-			"PollCount": uint64(40),
-			"Alloc":     uint64(1234),
+			"PollCount": int64(40),
+			"Alloc":     float64(1234),
 		}, http.StatusOK, false},
 
 		{"Invalid metric type", map[string]interface{}{
 			"PollCount": "invalid_type",
-			"Alloc":     uint64(1234),
+			"Alloc":     int64(1234),
 		}, http.StatusBadRequest, true},
 
 		{
@@ -39,49 +47,48 @@ func TestSender_Send(t *testing.T) {
 
 	for _, test := range testTable {
 		t.Run(test.name, func(t *testing.T) {
-			// Создаем сервер
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 				assert.Equal(t, http.MethodPost, r.Method)
+				assert.Equal(t, "application/octet-stream", r.Header.Get("Content-Type"))
+				assert.Equal(t, "encrypted", r.Header.Get("Content-Encoding"))
 
-				assert.Equal(t, "text/plain", r.Header.Get("Content-Type"))
-
-				// Проверяем URL
-				pathParts := strings.Split(r.URL.Path, "/")
-				if len(pathParts) != 5 {
-					t.Errorf("Invalid URL path format: %s", r.URL.Path)
-				}
-
-				// Базово проверяем метрики
-
-				metricType := pathParts[2]
-				metricName := pathParts[3]
-
-				if metricName == "PollCount" {
-					assert.Equal(t, "counter", metricType)
-				} else {
-					assert.Equal(t, "gauge", metricType)
-				}
+				body, err := io.ReadAll(r.Body)
+				assert.NoError(t, err)
+				assert.NotEmpty(t, body)
 
 				w.WriteHeader(test.wantStatus)
-
 			}))
 			defer server.Close()
 
-			s := &sender{
-				nil,
-				server.URL,
-				nil,
-			}
+			s, err := NewSender(server.URL, nil, pubKeyFile)
+			assert.NoError(t, err)
 
-			s.Send(test.metricsMap)
+			err = s.SendBatch(test.metricsMap)
+			if test.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 
 }
 
-func generateTestHash(src []byte, key []byte) string {
-	h := hmac.New(sha256.New, key)
-	h.Write(src)
-	return hex.EncodeToString(h.Sum(nil))
+func generateTestPublicKey(path string) error {
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	pubASN1, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	pubPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: pubASN1,
+	})
+
+	return os.WriteFile(path, pubPEM, 0644)
 }

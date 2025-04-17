@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,14 +16,19 @@ func main() {
 
 	printBuildInfo()
 
-	// Получаем config (flags или env)
+	// Получаем config (flags или env или json)
 	parseFlags()
+	parseJSON()
+	overrideEnv()
 
 	// Создаем интерфейсы
 	metricsCollector := collector.NewMetricsCollector()
 
 	baseURL := "http://" + serverHost
-	metricsSender := sender.NewSender(baseURL, []byte(flagHashKey))
+	metricsSender, err := sender.NewSender(baseURL, []byte(flagHashKey), cryptoKeyPath)
+	if err != nil {
+		log.Fatalf("Failed to init sender: %v", err)
+	}
 
 	// Создаем агент
 	a := agent.NewAgent(pollInterval, reportInterval, flagRateLimit, metricsCollector, metricsSender)
