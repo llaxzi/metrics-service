@@ -141,14 +141,19 @@ func (a *agent) Report(doneCh chan struct{}) {
 func (a *agent) worker(metrics <-chan Metric, errCh chan<- error, doneCh chan struct{}) {
 	for {
 		select {
-		case metric := <-metrics:
+		case metric, ok := <-metrics:
+			if !ok {
+				return
+			}
 			err := a.sender.SendJSON(metric.Name, metric.Value)
 			if err != nil {
 				errCh <- err
 				continue
 			}
 			if metric.Name == "PollCount" {
+				a.mu.Lock()
 				a.pollCount = 0
+				a.mu.Unlock()
 			}
 		case <-doneCh:
 			return

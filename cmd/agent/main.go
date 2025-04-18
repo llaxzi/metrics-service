@@ -36,7 +36,7 @@ func main() {
 	doneCh := make(chan struct{})
 	// Перехватываем сигнал Ctrl+C
 	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(signalCh, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, os.Interrupt)
 
 	// Запускаем агент
 	a.Collect(doneCh)
